@@ -1,5 +1,4 @@
 from django.db import models
-from Project.models import Proyecto
 from user.models import User as Usuario
 
 class ONG(models.Model):
@@ -11,9 +10,9 @@ class ONG(models.Model):
         return self.nombre
 
 class Participa(models.Model):
-    ong = models.ForeignKey(ONG, on_delete=models.CASCADE)
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
-    fecha_inicio = models.DateField(auto_now_add=True)  # información extra
+    ong = models.ForeignKey("ONG.ONG", on_delete=models.CASCADE)
+    proyecto = models.ForeignKey("Project.Proyecto", on_delete=models.CASCADE)
+    fecha_inicio = models.DateField(auto_now_add=True)  # info extra
 
     def __str__(self):
         return f"{self.ong.nombre} participa en {self.proyecto.nombre}"

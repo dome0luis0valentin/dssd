@@ -1,5 +1,5 @@
 from django.db import models
-from .models import TipoCobertura  
+from TypeCoverage.models import TipoCobertura  
 
 class PedidoCobertura(models.Model):
     estado = models.BooleanField(default=False)  # False = pendiente, True = completo
