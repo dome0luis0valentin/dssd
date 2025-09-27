@@ -1,0 +1,22 @@
+<h1>Procesos Disponibles</h1>
+<table>
+  <tr>
+    <th>ID</th>
+    <th>Nombre</th>
+    <th>Versión</th>
+    <th>Iniciar</th>
+  </tr>
+  {% for proceso in procesos %}
+  <tr>
+    <td>{{ proceso.id }}</td>
+    <td>{{ proceso.name }}</td>
+    <td>{{ proceso.version }}</td>
+    <td>
+      <form method="post" action="{% url 'iniciar_proceso' proceso.id %}">
+        {% csrf_token %}
+        <button type="submit">Iniciar</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
