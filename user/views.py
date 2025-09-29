@@ -12,7 +12,7 @@ def alta_user(request):
         form = UserForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('lista_users')  # Redirige a otra vista (por ejemplo, lista)
+            return redirect('lista_procesos_disponibles')  # Redirige a otra vista (por ejemplo, lista)
     else:
         form = UserForm()
     return render(request, 'User/altas_users.html', {'form': form})
@@ -91,6 +91,7 @@ def iniciar_proceso(request, proceso_id):
         resp = session.post(url, headers=headers, json={})
         if resp.status_code in [200, 201]:
             data = resp.json()
+            print(data)
             case_id = data.get("caseId")
             print("Proceso iniciado, case_id:", case_id)
             # Guardamos el case_id en la sesión o lo pasamos a la siguiente vista

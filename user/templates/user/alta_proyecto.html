@@ -1,23 +1,21 @@
-<!-- templates/avanzar_instancia.html -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Avanzar Instancia</title>
-</head>
-<body>
+{% extends "base.html" %}
 
+{% block title %}Avanzar Instancia{% endblock %}
 
-<h1>Llenar Datos del Proceso</h1>
-    <form method="post">
-        {% csrf_token %}
-        <label>Nombre:</label>
-        <input type="text" name="nombre" required><br><br>
+{% block content %}
+<h1 class="mb-4">Llenar Datos del Proceso</h1>
+<form method="post" class="card p-4 shadow-sm">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Nombre:</label>
+        <input type="text" name="nombre" class="form-control" required>
+    </div>
 
-        <label>Descripción:</label>
-        <input type="text" name="descripcion"><br><br>
+    <div class="mb-3">
+        <label class="form-label">Descripción:</label>
+        <input type="text" name="descripcion" class="form-control">
+    </div>
 
-        <button type="submit">Avanzar Instancia</button>
-    </form>
-</body>
-</html>
+    <button type="submit" class="btn btn-primary">Avanzar Instancia</button>
+</form>
+{% endblock %}

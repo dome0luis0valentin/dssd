@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Página de inicio</title>
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Bienvenido a la aplicación DSSD{% endblock %}
+
+{% block content %}
     <h1>Bienvenido a la aplicación DSSD</h1>
     <p>Esta es la página principal (home) del proyecto.</p>
 
@@ -12,7 +10,9 @@
         <ul>
             <li><a href="/admin/">Admin</a></li>
             <li><a href="/user/">Usuarios</a></li>
+            <li><a href="/user/procesos">Procesos</a></li>
         </ul>
     </nav>
-</body>
-</html>
+
+{% endblock %}
+
