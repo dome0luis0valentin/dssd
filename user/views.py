@@ -36,9 +36,9 @@ def login_user(request):
                 request.session['user_name'] = user.nombre
                 return redirect("index")
             else:
-                messages.error(request, "Contraseña incorrecta")
+                messages.error(request, "Usuario o Contraseña incorrecta")
         except User.DoesNotExist:
-            messages.error(request, "Usuario no encontrado")
+            messages.error(request, "Usuario o Contraseña incorrecta")
 
     return render(request, "login.html")
 

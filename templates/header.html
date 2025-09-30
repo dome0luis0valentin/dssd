@@ -1,7 +1,8 @@
 <header>
     <h1>Project Planning</h1>
     <nav>
-        {% if user.is_authenticated %}
+        {% if usuario %}
+            <span>Hola, {{ usuario.nombre }}!</span>
             <a href="{% url 'perfil_user' %}">Perfil</a>
             <a href="{% url 'logout_user' %}">Cerrar Sesión</a>
         {% else %}

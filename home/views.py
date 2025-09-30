@@ -1,21 +1,22 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
 from user.models import User
-from Project.models import Project   # 👈 ajusta el nombre de tu modelo/proyecto real
+from Project.models import Proyecto # Ajusta el nombre de la app si es distinto
 
 def home_view(request):
     user_id = request.session.get("user_id")
     if not user_id:
-        return redirect("login")  # si no está logueado, lo manda a login
+        return redirect("login")
 
-    # Buscar al usuario actual
     user = User.objects.get(id=user_id)
 
-    # Traer proyectos (ajusta según tu modelo)
-    proyectos = Project.objects.all()   # si quieres mostrar todos
-    # proyectos = Project.objects.filter(usuario=user)  # si quieres solo los del usuario
+    # Filtrar proyectos por estado
+    proyectos_proceso = Proyecto.objects.filter(estado="En Proceso")
+    proyectos_ejecucion = Proyecto.objects.filter(estado="En Ejecución")
+    proyectos_finalizados = Proyecto.objects.filter(estado="Finalizado")
 
     return render(request, "home.html", {
-        "user": user,
-        "proyectos": proyectos
+        "usuario": user,
+        "proyectos_proceso": proyectos_proceso,
+        "proyectos_ejecucion": proyectos_ejecucion,
+        "proyectos_finalizados": proyectos_finalizados,
     })
