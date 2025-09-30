@@ -149,16 +149,22 @@ def llenar_datos_proceso(request):
             print(task_id)
             print(username)
             print(assign_resp)
+            print(f"Task assigned")
             if assign_resp.status_code not in [200, 204]:
                 print("Error al asignar tarea:", assign_resp.text)
                 return redirect("lista_procesos_disponibles")
-        print(task_id)
+        print(f"Task id: {task_id}")
         print(username)
         print(user_id)
-        print(username)
+
+        debug_resp = f"{url_bonita}/API/bpm/userTask/{task_id}"
+        debug_resp = session.get(debug_resp, headers=headers, json=datos)
+        print(f"debug response: {debug_resp.text}")
+
         url_completar = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
         resp = session.post(url_completar, headers=headers, json=datos)
-        if resp.status_code in [200, 201]:
+        print(f"Respuesta a execution {resp}")
+        if resp.status_code in [200, 204]:
             print("Instancia avanzada con éxito")
             return redirect("lista_procesos_disponibles")
         else:
