@@ -1,18 +1,46 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Página de inicio</title>
-</head>
-<body>
-    <h1>Bienvenido a la aplicación DSSD</h1>
-    <p>Esta es la página principal (home) del proyecto.</p>
+{% extends 'base.html' %}
 
-    <nav>
-        <ul>
-            <li><a href="/admin/">Admin</a></li>
-            <li><a href="/user/">Usuarios</a></li>
-        </ul>
-    </nav>
-</body>
-</html>
+{% block title %}Página de inicio{% endblock %}
+
+{% block content %}
+    <h1>Bienvenido a la aplicación DSSD</h1>
+
+    {% if usuario %}
+        <p>Hola <strong>{{ usuario.nombre }}</strong>, aquí están tus proyectos:</p>
+
+        <h2>✅ Proyectos Ejecutados</h2>
+        {% if proyectos_ejecutados %}
+            <ul>
+                {% for proyecto in proyectos_ejecutados %}
+                    <li>{{ proyecto.nombre }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hay proyectos ejecutados.</p>
+        {% endif %}
+
+        <h2>⚙️ Proyectos en Proceso</h2>
+        {% if proyectos_proceso %}
+            <ul>
+                {% for proyecto in proyectos_proceso %}
+                    <li>{{ proyecto.nombre }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hay proyectos en proceso.</p>
+        {% endif %}
+
+        <h2>🕒 Proyectos No Iniciados</h2>
+        {% if proyectos_no_iniciados %}
+            <ul>
+                {% for proyecto in proyectos_no_iniciados %}
+                    <li>{{ proyecto.nombre }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No hay proyectos pendientes.</p>
+        {% endif %}
+    {% else %}
+        <p>Para ver tus proyectos debes <a href="{% url 'login_user' %}">iniciar sesión</a>.</p>
+    {% endif %}
+{% endblock %}

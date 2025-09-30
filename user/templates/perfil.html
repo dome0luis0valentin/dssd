@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Perfil de {{ request.session.user_name }}</h2>
+<p>Email: {{ request.session.user_email }}</p>
+{% endblock %}

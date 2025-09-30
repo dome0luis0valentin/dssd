@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Procesos Disponibles</h2>
+<ul>
+  {% for p in procesos %}
+    <li>
+      {{ p.displayName }}
+      <form method="post" action="{% url 'bonita:iniciar_proceso' p.id %}">
+        {% csrf_token %}
+        <button type="submit">Iniciar</button>
+      </form>
+    </li>
+  {% empty %}
+    <li>No hay procesos disponibles</li>
+  {% endfor %}
+</ul>
+{% endblock %}
