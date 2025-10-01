@@ -9,9 +9,11 @@ from .wraps import session_required
 import requests
 
 url_bonita = "http://localhost:8080/bonita"
+
+"""
 #user = "walter.bates"
 #password = "admin"
-"""
+
 def alta_user(request):
     if request.method == "POST":
         form = UserForm(request.POST)
@@ -22,7 +24,7 @@ def alta_user(request):
         form = UserForm()
     return render(request, 'User/altas_users.html', {'form': form})
 """
-
+# Login en Bonita
 def bonita_login(request, user_email, user_password):
     url = f"{url_bonita}/loginservice"
     payload = {
@@ -85,7 +87,7 @@ def login_view(request):
     
 def lista_procesos_disponibles(request):
     procesos = []
-    session = bonita_login(request)
+    session = request.session.get("cookies")
     if not session:
         return render(request, 'user/lista_procesos.html', {'procesos': procesos})
 
