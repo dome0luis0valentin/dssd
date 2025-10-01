@@ -1,16 +1,27 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Perfil de {{ usuario.nombre }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Perfil de {{ usuario.nombre }} {{ usuario.apellido }}</h2>
-    <ul class="list-group">
-        <li class="list-group-item"><strong>Email:</strong> {{ usuario.email }}</li>
-        <li class="list-group-item"><strong>Edad:</strong> {{ usuario.edad }}</li>
-        {% if ong %}
-            <li class="list-group-item"><strong>ONG:</strong> {{ ong.nombre }}</li>
-        {% else %}
-            <li class="list-group-item text-muted">No pertenece a ninguna ONG</li>
-        {% endif %}
+<h2>Perfil de {{ usuario.nombre }} {{ usuario.apellido }}</h2>
+<p>Email: {{ usuario.email }}</p>
+<p>Edad: {{ usuario.edad }}</p>
+
+{% if consejo %}
+    <p>Consejo Directivo: {{ consejo.nombre }}</p>
+{% else %}
+    <p>No pertenece a ningún Consejo Directivo.</p>
+{% endif %}
+
+{% if ongs %}
+    <h3>ONGs a las que pertenece:</h3>
+    <ul>
+        {% for ong in ongs %}
+            <li>{{ ong.nombre }}</li>
+        {% endfor %}
     </ul>
-</div>
+{% else %}
+    <p>No pertenece a ninguna ONG.</p>
+{% endif %}
+
 {% endblock %}

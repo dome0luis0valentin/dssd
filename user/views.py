@@ -217,26 +217,29 @@ def llenar_datos_proceso(request):
     return render(request, "user/alta_proyecto.html")
 
 @session_required
-
 def perfil(request):
+    # 1️⃣ Verificamos sesión
     user_id = request.session.get("user_id")
     if not user_id:
-        # Si no hay sesión, redirigimos al login
-        return redirect("login_user")
+        return redirect("login_user")  # redirige al login si no hay sesión
 
-    # Obtenemos el usuario de la base de datos
+    # 2️⃣ Obtenemos el usuario
     usuario = User.objects.get(id=user_id)
 
-    # Obtenemos la ONG asociada a su consejo (si tiene)
-    ong = None
-    if usuario.consejo:
-        ong = usuario.consejo.ong  # si ConsejoDirectivo tiene relación con ONG
+    # 3️⃣ Obtenemos el consejo (puede ser None)
+    consejo = usuario.consejo if usuario.consejo else None
 
+    # 4️⃣ Obtenemos todas las ONGs del usuario
+    ongs = usuario.ongs.all()  # usando el related_name='ongs' en ONG
+
+    # 5️⃣ Contexto para el template
     context = {
-        'usuario': usuario,
-        'ong': ong
+        "usuario": usuario,
+        "consejo": consejo,
+        "ongs": ongs
     }
-    return render(request, 'perfil.html', context)
+
+    return render(request, "perfil.html", context)
 
 def logout_view(request):
     request.session.flush()  # elimina toda la sesión
