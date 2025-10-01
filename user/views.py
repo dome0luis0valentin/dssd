@@ -64,6 +64,7 @@ def login_view(request):
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
+                print("acase rompio")
                 messages.error(request, "Usuario no encontrado")
                 return redirect("login")
             
@@ -71,7 +72,10 @@ def login_view(request):
                 # Guardamos en session el login local
                 request.session["user_id"] = user.id
                 request.session["user_name"] = f"{user.nombre} {user.apellido}"
-
+                print(email)
+                if email == "walter.bates@correo.com":
+                    email = "walter.bates"
+                    
                 # Intentamos login en Bonita
                 if bonita_login(request, email, password):
                     return render(request,'home.html',{"user_name": request.session.get("user_name")})
