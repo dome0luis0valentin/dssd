@@ -1,12 +1,16 @@
 from django.shortcuts import render, redirect
-from .forms import UserForm
+#from .forms import UserForm
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import LoginForm
+from user.models import User 
 import requests
 
 url_bonita = "http://localhost:8080/bonita"
-user = "walter.bates"
-password = "admin"
-
+#user = "walter.bates"
+#password = "admin"
+"""
 def alta_user(request):
     if request.method == "POST":
         form = UserForm(request.POST)
@@ -16,30 +20,67 @@ def alta_user(request):
     else:
         form = UserForm()
     return render(request, 'User/altas_users.html', {'form': form})
+"""
 
-def bonita_login(request):
+def bonita_login(request, user_email, user_password):
     url = f"{url_bonita}/loginservice"
     payload = {
-        "username": user,
-        "password": password,
+        "username": user_email,
+        "password": user_password,
         "redirect": "false",
     }
 
     session = requests.Session()
     response = session.post(url, data=payload)
+    
+    # Parte de debug
     print("STATUS:", response.status_code)
     print("COOKIES:", session.cookies.get_dict())
     print("BODY:", response.text)
+    # Fin parte de debug
+    
     if response.status_code == 204:
         request.session["cookies"] = session.cookies.get_dict()
         request.session["headers"] = {
             "X-Bonita-API-Token": session.cookies.get("X-Bonita-API-Token")
         }
-        request.session["username_bonita"] = user
+        request.session["username_bonita"] = user_email
         print("Login exitoso")
         return session
     else:
         raise Exception("Error al loguearse en Bonita", response.text)
+
+# Login de Django
+def login_view(request):
+    if request.method == "POST":
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data["email"]
+            password = form.cleaned_data["password"]
+            
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                messages.error(request, "Usuario no encontrado")
+                return redirect("login")
+            
+            if user.check_password(password):
+                # Guardamos en session el login local
+                request.session["user_id"] = user.id
+                request.session["user_name"] = f"{user.nombre} {user.apellido}"
+
+                # Intentamos login en Bonita
+                if bonita_login(request, email, password):
+                    return redirect("home")
+                else:
+                    messages.error(request, "Error al loguearse en Bonita")
+                    return redirect("login")
+            else:
+                messages.error(request, "Contraseña incorrecta")
+    else:
+        form = LoginForm()
+    
+    return render(request, "login.html", {"form": form})
     
 def lista_procesos_disponibles(request):
     procesos = []
@@ -173,3 +214,19 @@ def llenar_datos_proceso(request):
 
 
     return render(request, "user/alta_proyecto.html")
+
+@login_required
+def perfil(request):
+    # Obtenemos el usuario logueado
+    usuario = request.user
+    
+    # Obtenemos la ONG asociada a su consejo (si tiene)
+    ong = None
+    if usuario.consejo:
+        ong = usuario.consejo.ong  # asumimos que el modelo ConsejoDirectivo tiene relación con ONG
+
+    context = {
+        'usuario': usuario,
+        'ong': ong
+    }
+    return render(request, 'perfil.html', context)

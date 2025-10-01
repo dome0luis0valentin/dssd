@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Perfil de {{ usuario.nombre }} {{ usuario.apellido }}</h2>
+    <ul class="list-group">
+        <li class="list-group-item"><strong>Email:</strong> {{ usuario.email }}</li>
+        <li class="list-group-item"><strong>Edad:</strong> {{ usuario.edad }}</li>
+        {% if ong %}
+            <li class="list-group-item"><strong>ONG:</strong> {{ ong.nombre }}</li>
+        {% else %}
+            <li class="list-group-item text-muted">No pertenece a ninguna ONG</li>
+        {% endif %}
+    </ul>
+</div>
+{% endblock %}

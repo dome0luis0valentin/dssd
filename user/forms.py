@@ -1,7 +1,10 @@
 from django import forms
-from .models import User
 
-class UserForm(forms.ModelForm):
-    class Meta:
-        model = User
-        fields = ['nombre', 'apellido', 'edad', 'email']
+class LoginForm(forms.Form):
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={'class': 'form-control'})
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control'})
+    )
+
