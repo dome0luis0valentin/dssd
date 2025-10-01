@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .forms import LoginForm
 from user.models import User 
+from .wraps import session_required
 import requests
 
 url_bonita = "http://localhost:8080/bonita"
@@ -71,7 +72,7 @@ def login_view(request):
 
                 # Intentamos login en Bonita
                 if bonita_login(request, email, password):
-                    return redirect("home")
+                    return render(request,'home.html',{"user_name": request.session.get("user_name")})
                 else:
                     messages.error(request, "Error al loguearse en Bonita")
                     return redirect("login")
@@ -215,18 +216,28 @@ def llenar_datos_proceso(request):
 
     return render(request, "user/alta_proyecto.html")
 
-@login_required
+@session_required
+
 def perfil(request):
-    # Obtenemos el usuario logueado
-    usuario = request.user
-    
+    user_id = request.session.get("user_id")
+    if not user_id:
+        # Si no hay sesión, redirigimos al login
+        return redirect("login_user")
+
+    # Obtenemos el usuario de la base de datos
+    usuario = User.objects.get(id=user_id)
+
     # Obtenemos la ONG asociada a su consejo (si tiene)
     ong = None
     if usuario.consejo:
-        ong = usuario.consejo.ong  # asumimos que el modelo ConsejoDirectivo tiene relación con ONG
+        ong = usuario.consejo.ong  # si ConsejoDirectivo tiene relación con ONG
 
     context = {
         'usuario': usuario,
         'ong': ong
     }
     return render(request, 'perfil.html', context)
+
+def logout_view(request):
+    request.session.flush()  # elimina toda la sesión
+    return redirect('home')
