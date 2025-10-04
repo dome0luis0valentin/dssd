@@ -6,7 +6,7 @@ class Etapa(models.Model):
     
     # Relación One-to-Many: un Etapa tiene un proyecto
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='etapas')
-    
+    descripcion = models.TextField(null=True, blank=True)
     pedido = models.ForeignKey(PedidoCobertura, on_delete=models.CASCADE, related_name='etapas')
     nombre = models.CharField(max_length=255)
     fecha_inicio = models.DateField()

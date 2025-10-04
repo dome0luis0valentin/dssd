@@ -5,7 +5,7 @@
 
     <div class="d-flex">
       {% if user_name %}
-        <span class="navbar-text me-2">Hola, {{ user_name }}</span>
+        <a class="btn btn-outline-light me-2" href="{% url 'proyecto' %}">Proyectos</a>
         <a class="btn btn-outline-light me-2" href="{% url 'perfil' %}">Ver Perfil</a>
         <a class="btn btn-outline-danger" href="{% url 'logout' %}">Cerrar Sesión</a>
       {% else %}

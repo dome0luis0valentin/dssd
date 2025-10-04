@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import alta_proyecto
+from . import views
 
 urlpatterns = [
-    path('alta/<int:case_id>/avanzar/', alta_proyecto, name='alta_proyecto'),
+    path('proyecto/', views.index, name='proyecto'),
+    path('proyecto/crear/', views.crear_proyecto, name='crear_proyecto'),
+    path('proyecto/<int:pk>/', views.detalle_proyecto, name='detalle_proyecto'),
 ]

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ proyecto.nombre }}</h2>
+  <p>{{ proyecto.descripcion }}</p>
+  <p><b>Estado:</b> {{ proyecto.get_estado_display }}</p>
+  <p><b>ONG Originadora:</b> {{ proyecto.originador.nombre }}</p>
+
+  <h3 class="mt-4">Etapas</h3>
+  {% if etapas %}
+    <ul class="list-group">
+      {% for etapa in etapas %}
+        <li class="list-group-item">
+          <b>{{ etapa.nombre }}</b>  
+          ({{ etapa.fecha_inicio }} → {{ etapa.fecha_fin|default:"En curso" }})  
+          <br>
+          Pedido de Cobertura: {{ etapa.pedido.tipo_cobertura.nombre }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No hay etapas cargadas.</p>
+  {% endif %}
+</div>
+{% endblock %}

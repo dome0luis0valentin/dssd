@@ -3,8 +3,6 @@ from user.models import User as Usuario
 
 class ONG(models.Model):
     nombre = models.CharField(max_length=255)
-    # Relación Many-to-Many: una ONG puede tener múltiples usuarios y un usuario puede pertenecer a múltiples ONGs
-    usuarios = models.ManyToManyField(Usuario, related_name='ongs', blank=True)
 
     def __str__(self):
         return self.nombre

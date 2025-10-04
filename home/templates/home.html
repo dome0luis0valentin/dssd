@@ -4,15 +4,9 @@
 
 {% block content %}
     <h1>Bienvenido a la aplicación DSSD</h1>
-    <p>Esta es la página principal (home) del proyecto.</p>
-
-    <nav>
-        <ul>
-            <li><a href="/admin/">Admin</a></li>
-            <li><a href="/user/">Usuarios</a></li>
-            <li><a href="/user/procesos">Procesos</a></li>
-        </ul>
-    </nav>
-
+    {% if user_name %}
+        <span class="navbar-text me-2">Hola, {{ user_name }}</span>
+    {% endif %}
+    <p>INFROMACION SOBRE LA APLICACION</p>
 {% endblock %}
 

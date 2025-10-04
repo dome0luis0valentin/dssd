@@ -10,20 +10,6 @@ import requests
 
 url_bonita = "http://localhost:8080/bonita"
 
-"""
-#user = "walter.bates"
-#password = "admin"
-
-def alta_user(request):
-    if request.method == "POST":
-        form = UserForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('lista_procesos_disponibles')  # Redirige a otra vista (por ejemplo, lista)
-    else:
-        form = UserForm()
-    return render(request, 'User/altas_users.html', {'form': form})
-"""
 # Login en Bonita
 def bonita_login(request, user_email, user_password):
     url = f"{url_bonita}/loginservice"
@@ -88,7 +74,8 @@ def login_view(request):
         form = LoginForm()
     
     return render(request, "login.html", {"form": form})
-    
+
+"""
 def lista_procesos_disponibles(request):
     procesos = []
     session = request.session.get("cookies")
@@ -116,6 +103,7 @@ def lista_procesos_disponibles(request):
         procesos = []
 
     return render(request, 'user/lista_procesos.html', {'procesos': procesos})
+"""
 
 def iniciar_proceso(request, proceso_id):
     if request.method == "POST":
@@ -247,6 +235,7 @@ def perfil(request):
 
     return render(request, "perfil.html", context)
 
+# cerrar sesion
 def logout_view(request):
     request.session.flush()  # elimina toda la sesión
     return redirect('home')
