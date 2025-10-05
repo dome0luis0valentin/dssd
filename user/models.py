@@ -11,11 +11,8 @@ class User(models.Model):
     password = models.CharField(max_length=128)  # para guardar contraseña hasheada
     
         # Un usuario pertenece a una única ONG
-    ong = models.ForeignKey(
-        ONG,
-        on_delete=models.CASCADE,
-        related_name="usuarios"
-    )
+    ong = models.ForeignKey(ONG, on_delete=models.CASCADE, null=True, blank=True)
+
     
     # Un usuario pertenece a un único consejo directivo
     consejo = models.ForeignKey(

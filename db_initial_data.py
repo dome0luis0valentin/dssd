@@ -28,8 +28,8 @@ for i in range(1, 6):
     usuario.set_password("123")
     usuario.save()
     
-    ong.usuarios.add(usuario)
-    ong.save()
+    usuario.ong = ong
+    usuario.save()
     print(f"ONG creada: {ong.nombre} con usuario {usuario.nombre} {usuario.apellido}")
 
 # --- CREAR Consejo Directivo con 3 usuarios ---

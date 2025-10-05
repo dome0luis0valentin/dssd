@@ -1,5 +1,4 @@
 from django.db import models
-from user.models import User as Usuario
 
 class ONG(models.Model):
     nombre = models.CharField(max_length=255)

@@ -53,10 +53,10 @@ def crear_proyecto(request):
         if proyecto_form.is_valid():
             # Recuperamos el user_id desde la sesión
             user_id = request.session.get("user_id")
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(id=user_id) 
 
             proyecto = proyecto_form.save(commit=False)
-            proyecto.originador = request.user.ong  # ONG del usuario logueado
+            proyecto.originador = user.ong  # ONG del usuario logueado
             proyecto.save()
 
             formset = EtapaFormSet(request.POST, instance=proyecto)
