@@ -5,7 +5,7 @@ from .models import Proyecto
 from Stage.models import Etapa
 from user.models import User
 from CoverageRequest.models import PedidoCobertura
-from .forms import ProyectoForm, EtapaForm
+from .forms import ProyectoForm
 
 import requests
 url_bonita = "http://localhost:8080/bonita"

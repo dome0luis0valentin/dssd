@@ -223,14 +223,14 @@ def perfil(request):
     # 3️⃣ Obtenemos el consejo (puede ser None)
     consejo = usuario.consejo if usuario.consejo else None
 
-    # 4️⃣ Obtenemos todas las ONGs del usuario
-    ongs = usuario.ongs.all()  # usando el related_name='ongs' en ONG
+    # 4️⃣ Obtenemos la ONG del usuario
+    ong = usuario.ong  # usando el related_name='ongs' en ONG
 
     # 5️⃣ Contexto para el template
     context = {
         "usuario": usuario,
         "consejo": consejo,
-        "ongs": ongs
+        "ong": ong
     }
 
     return render(request, "perfil.html", context)

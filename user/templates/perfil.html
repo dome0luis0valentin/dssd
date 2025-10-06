@@ -13,15 +13,12 @@
     <p>No pertenece a ningún Consejo Directivo.</p>
 {% endif %}
 
-{% if ongs %}
-    <h3>ONGs a las que pertenece:</h3>
-    <ul>
-        {% for ong in ongs %}
-            <li>{{ ong.nombre }}</li>
-        {% endfor %}
-    </ul>
+{% if ong %}
+    <h3>ONG a la que pertenece:</h3>
+    <p>{{ ong.nombre }}</p>
 {% else %}
     <p>No pertenece a ninguna ONG.</p>
 {% endif %}
+
 
 {% endblock %}
