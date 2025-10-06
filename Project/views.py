@@ -46,37 +46,26 @@ def index(request):
     return render(request, "proyecto_index.html", {"proyectos": proyectos_page})
 
 def crear_proyecto(request):
-    EtapaFormSet = inlineformset_factory(Proyecto, Etapa, form=EtapaForm, extra=1, can_delete=False)
-
     if request.method == "POST":
         proyecto_form = ProyectoForm(request.POST)
         if proyecto_form.is_valid():
             # Recuperamos el user_id desde la sesión
             user_id = request.session.get("user_id")
-            user = User.objects.get(id=user_id) 
+            user = User.objects.get(id=user_id)
 
+            # Creamos el proyecto pero no lo guardamos aún
             proyecto = proyecto_form.save(commit=False)
             proyecto.originador = user.ong  # ONG del usuario logueado
-            proyecto.save()
+            proyecto.estado = "Proceso"      # Estado por defecto
+            proyecto.save()  # Guardamos el proyecto
 
-            formset = EtapaFormSet(request.POST, instance=proyecto)
-            if formset.is_valid():
-                etapas = formset.save(commit=False)
-                for etapa in etapas:
-                    etapa.proyecto = proyecto
-                    etapa.save()
-                    # crear PedidoCobertura automático
-                    etapa.pedido = PedidoCobertura.objects.create(tipo_cobertura=etapa.pedido.tipo_cobertura)
-                    etapa.save()
-
-                return redirect("detalle_proyecto", pk=proyecto.pk)
+            # Redirigimos a la vista de carga de etapas (en otra app)
+            return redirect("cargar_etapas", proyecto_id=proyecto.id)
     else:
         proyecto_form = ProyectoForm()
-        formset = EtapaFormSet()
 
     return render(request, "proyecto_crear.html", {
         "proyecto_form": proyecto_form,
-        "formset": formset
     })
 
 def iniciar_proceso_bonita(proyecto):

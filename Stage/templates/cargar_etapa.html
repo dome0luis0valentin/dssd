@@ -1,0 +1,77 @@
+<!-- templates/etapas/cargar_etapas.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Cargar Etapa para el Proyecto: {{ proyecto.nombre }}</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- Nombre -->
+        <div class="mb-3">
+            {{ form.nombre.label_tag }}
+            {{ form.nombre }}
+            {% if form.nombre.errors %}
+                <div class="text-danger">{{ form.nombre.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Descripción -->
+        <div class="mb-3">
+            {{ form.descripcion.label_tag }}
+            {{ form.descripcion }}
+            {% if form.descripcion.errors %}
+                <div class="text-danger">{{ form.descripcion.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Fecha inicio -->
+        <div class="mb-3">
+            {{ form.fecha_inicio.label_tag }}
+            {{ form.fecha_inicio }}
+            {% if form.fecha_inicio.errors %}
+                <div class="text-danger">{{ form.fecha_inicio.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Fecha fin -->
+        <div class="mb-3">
+            {{ form.fecha_fin.label_tag }}
+            {{ form.fecha_fin }}
+            {% if form.fecha_fin.errors %}
+                <div class="text-danger">{{ form.fecha_fin.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Tipo de cobertura existente -->
+        <div class="mb-3">
+            {{ form.tipo_cobertura.label_tag }}
+            {{ form.tipo_cobertura }}
+            {% if form.tipo_cobertura.errors %}
+                <div class="text-danger">{{ form.tipo_cobertura.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Nuevo tipo de cobertura -->
+        <div class="mb-3">
+            {{ form.nuevo_tipo_cobertura.label_tag }}
+            {{ form.nuevo_tipo_cobertura }}
+            {% if form.nuevo_tipo_cobertura.errors %}
+                <div class="text-danger">{{ form.nuevo_tipo_cobertura.errors }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Botones -->
+        <div class="mb-3">
+            <button type="submit" name="action" value="agregar" class="btn btn-primary">
+                Agregar otra etapa
+            </button>
+            <button type="submit" name="action" value="guardar" class="btn btn-success">
+                Guardar proyecto
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

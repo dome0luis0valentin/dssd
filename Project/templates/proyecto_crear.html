@@ -4,38 +4,18 @@
   <h2>Crear Proyecto</h2>
   <form method="post">
     {% csrf_token %}
-
     <div class="card p-3 mb-3">
       <h4>Datos del Proyecto</h4>
+
+      <!-- Campo oculto: estado por defecto -->
+      <input type="hidden" name="estado" value="Proceso">
+
       {{ proyecto_form.as_p }}
     </div>
 
-    <div class="card p-3 mb-3">
-      <h4>Etapas</h4>
-      {{ formset.management_form }}
-      {% for form in formset %}
-        <div class="border p-2 mb-2">
-          {{ form.as_p }}
-        </div>
-      {% endfor %}
-      <button type="button" id="add-form" class="btn btn-secondary">+ Agregar Etapa</button>
-    </div>
-
-    <button type="submit" class="btn btn-primary">Guardar Proyecto</button>
+    <button type="submit" name="cargar_etapas" class="btn btn-secondary">
+      Cargar Etapas
+    </button>
   </form>
 </div>
-
-<script>
-  // JS para clonar formularios del formset
-  document.getElementById("add-form").addEventListener("click", function() {
-      var formsetDiv = document.querySelector(".card:nth-of-type(2)");
-      var totalForms = document.getElementById("id_etapa_set-TOTAL_FORMS");
-      var newFormIndex = totalForms.value;
-
-      var newFormHtml = formsetDiv.querySelector(".border:last-of-type").outerHTML.replace(/-\d+-/g, "-" + newFormIndex + "-");
-      formsetDiv.insertAdjacentHTML("beforeend", newFormHtml);
-
-      totalForms.value = parseInt(totalForms.value) + 1;
-  });
-</script>
 {% endblock %}
