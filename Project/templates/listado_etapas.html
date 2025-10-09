@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Etapas del Proyecto: {{ proyecto.nombre }}</h2>
+<p><strong>Descripción:</strong> {{ proyecto.descripcion }}</p>
+
+<table class="table table-striped mt-3">
+    <thead>
+        <tr>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Fecha inicio</th>
+            <th>Fecha fin</th>
+            <th>Acción</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for etapa in etapas %}
+        <tr>
+            <td>{{ etapa.nombre }}</td>
+            <td>{{ etapa.descripcion|default:"(Sin descripción)" }}</td>
+            <td>{{ etapa.fecha_inicio }}</td>
+            <td>{{ etapa.fecha_fin|default:"(En curso)" }}</td>
+            <td>
+                <form method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-success">Postular</button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center">No hay etapas registradas para este proyecto.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'proyecto' %}" class="btn btn-secondary mt-3">Volver a proyectos</a>
+
+{% endblock %}

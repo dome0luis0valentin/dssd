@@ -11,63 +11,46 @@ import requests
 url_bonita = "http://localhost:8080/bonita"
 
 def index(request):
-    proyectos = []
-    session_cookies = request.session.get("cookies")
-
-    if not session_cookies:
-        return render(request, "proyecto_index.html", {"proyectos": proyectos})
-
-    # Obtener cookies y headers guardados en la sesión
+    # 🔹 1️⃣ Guardar las IDs de procesos en sesión (para usarlas luego en crear_proyecto)
     cookies = request.session.get("cookies", {})
     headers = request.session.get("headers", {})
 
-    # Crear sesión de requests
-    session = requests.Session()
-    for name, value in cookies.items():
-        session.cookies.set(name, value)
-        
-    # 🔹 1️⃣ Procesos que queremos obtener
-    nombres_procesos = {
-        "process_id_proyecto": "Ciclo de Vida de Proyecto",
-        "process_id_observacion": "Ciclo de Observaciones",
-    }
+    if cookies and headers:
+        session = requests.Session()
+        for name, value in cookies.items():
+            session.cookies.set(name, value)
 
-    for clave, nombre_proceso in nombres_procesos.items():
-        url_procesos = f"{url_bonita}/API/bpm/process"
-        params = {"f": f"name={nombre_proceso}"}
         try:
-            resp = session.get(url_procesos, params=params, headers=headers, timeout=10)
-            resp.raise_for_status()
-            procesos = resp.json()
-            if procesos:
-                process_id = procesos[0]["id"]
-                request.session[clave] = process_id
-                print(f"✅ {nombre_proceso} -> ID: {process_id}")
-            else:
-                request.session[clave] = None
-                print(f"⚠️ No se encontró el proceso '{nombre_proceso}'")
-        except requests.exceptions.RequestException as e:
-            request.session[clave] = None
-            print(f"❌ Error al obtener '{nombre_proceso}':", e)
+            # Ciclo de Vida
+            resp_ciclo = session.get(f"{url_bonita}/API/bpm/process", 
+                                     params={"f": "name=Ciclo de Vida de Proyecto"},
+                                     headers=headers, timeout=10)
+            if resp_ciclo.status_code == 200 and resp_ciclo.json():
+                request.session["process_id_ciclo_vida"] = resp_ciclo.json()[0]["id"]
+                print(f"✅ Ciclo de Vida de Proyecto -> ID: {resp_ciclo.json()[0]['id']}")
 
-    # Endpoint para proyectos (ejemplo: podrías usar otra API en Bonita)
-    url_proyectos = f"{url_bonita}/API/bpm/process?p=0&c=50"
+            # Ciclo de Observaciones
+            resp_obs = session.get(f"{url_bonita}/API/bpm/process", 
+                                   params={"f": "name=Ciclo de Observaciones"},
+                                   headers=headers, timeout=10)
+            if resp_obs.status_code == 200 and resp_obs.json():
+                request.session["process_id_ciclo_observacion"] = resp_obs.json()[0]["id"]
+                print(f"✅ Ciclo de Observaciones -> ID: {resp_obs.json()[0]['id']}")
 
-    try:
-        response = session.get(url_proyectos, headers=headers, timeout=10)
-        response.raise_for_status()
-        proyectos = response.json()
-        print(f"Cantidad de proyectos disponibles: {len(proyectos)}")
-    except requests.exceptions.RequestException as e:
-        print("Error al obtener proyectos:", e)
-        proyectos = []
+        except Exception as e:
+            print("⚠️ Error al obtener IDs de procesos:", e)
 
-    # Paginación con Django
-    paginator = Paginator(proyectos, 5)  # 5 proyectos por página
+    # 🔹 2️⃣ Obtener proyectos desde tu base de datos local
+    proyectos = Proyecto.objects.all().order_by("-id")
+
+    # 🔹 3️⃣ Paginación
+    paginator = Paginator(proyectos, 5)
     page_number = request.GET.get("page")
     proyectos_page = paginator.get_page(page_number)
 
-    return render(request, "proyecto_index.html", {"proyectos": proyectos_page})
+    return render(request, "proyecto_index.html", {
+        "proyectos": proyectos_page
+    })
 
 def crear_proyecto(request):
     if request.method == "POST":
@@ -130,6 +113,13 @@ def crear_proyecto(request):
 
     return render(request, "proyecto_crear.html", {"proyecto_form": proyecto_form})
 
+def etapas_proyecto(request, proyecto_id):
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    etapas = Etapa.objects.filter(proyecto=proyecto)
+    return render(request, 'listado_etapas.html', {
+        'proyecto': proyecto,
+        'etapas': etapas,
+    })
 
 def iniciar_proceso_bonita(proyecto):
     url = "http://localhost:8080/bonita/API/bpm/process/PROJECT_ID/instantiation"
