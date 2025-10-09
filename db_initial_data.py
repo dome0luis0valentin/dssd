@@ -19,6 +19,17 @@ print("Datos anteriores eliminados.")
 for i in range(1, 6):
     ong = ONG.objects.create(nombre=f"ONG{i}")
     
+    if i ==1:
+        usuario = User.objects.create(
+            nombre="Walter",
+            apellido="Bates",
+            edad=25 + i,
+            email="walter.bates@correo.com"
+            )
+        usuario.ong = ong
+        usuario.set_password("admin")
+        usuario.save()
+    
     usuario = User.objects.create(
         nombre=f"UsuarioONG{i}",
         apellido=f"Apellido{i}",
@@ -48,14 +59,5 @@ for i in range(1, 4):
     user.save()
     miembros.append(user)
     
-usuario = User.objects.create(
-    nombre="Walter",
-    apellido="Bates",
-    edad=25 + i,
-    email="walter.bates@correo.com"
-)
-usuario.set_password("admin")
-usuario.save()
-
 print(f"Consejo Directivo creado: {consejo.nombre} con miembros {', '.join([m.nombre for m in miembros])}")
 print("Datos iniciales cargados correctamente.")

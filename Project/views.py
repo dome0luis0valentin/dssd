@@ -25,6 +25,30 @@ def index(request):
     session = requests.Session()
     for name, value in cookies.items():
         session.cookies.set(name, value)
+        
+    # 🔹 1️⃣ Procesos que queremos obtener
+    nombres_procesos = {
+        "process_id_proyecto": "Ciclo de Vida de Proyecto",
+        "process_id_observacion": "Ciclo de Observaciones",
+    }
+
+    for clave, nombre_proceso in nombres_procesos.items():
+        url_procesos = f"{url_bonita}/API/bpm/process"
+        params = {"f": f"name={nombre_proceso}"}
+        try:
+            resp = session.get(url_procesos, params=params, headers=headers, timeout=10)
+            resp.raise_for_status()
+            procesos = resp.json()
+            if procesos:
+                process_id = procesos[0]["id"]
+                request.session[clave] = process_id
+                print(f"✅ {nombre_proceso} -> ID: {process_id}")
+            else:
+                request.session[clave] = None
+                print(f"⚠️ No se encontró el proceso '{nombre_proceso}'")
+        except requests.exceptions.RequestException as e:
+            request.session[clave] = None
+            print(f"❌ Error al obtener '{nombre_proceso}':", e)
 
     # Endpoint para proyectos (ejemplo: podrías usar otra API en Bonita)
     url_proyectos = f"{url_bonita}/API/bpm/process?p=0&c=50"
@@ -49,24 +73,63 @@ def crear_proyecto(request):
     if request.method == "POST":
         proyecto_form = ProyectoForm(request.POST)
         if proyecto_form.is_valid():
-            # Recuperamos el user_id desde la sesión
             user_id = request.session.get("user_id")
             user = User.objects.get(id=user_id)
 
-            # Creamos el proyecto pero no lo guardamos aún
             proyecto = proyecto_form.save(commit=False)
-            proyecto.originador = user.ong  # ONG del usuario logueado
-            proyecto.estado = "Proceso"      # Estado por defecto
-            proyecto.save()  # Guardamos el proyecto
+            proyecto.originador = user.ong
+            proyecto.estado = "Proceso"
+            proyecto.save()
 
-            # Redirigimos a la vista de carga de etapas (en otra app)
+            try:
+                cookies = request.session.get("cookies")
+                headers = request.session.get("headers")
+                process_id_proyecto = request.session.get("process_id_proyecto")  # 🔹 Ciclo de Vida
+                process_id_observacion = request.session.get("process_id_observacion")  # 🔹 Ciclo de Observación
+
+                if not cookies or not headers:
+                    raise Exception("No hay sesión de Bonita activa")
+
+                #  Elegí cuál usar según el contexto
+                process_id = process_id_proyecto  # o process_id_observacion
+
+                if not process_id:
+                    raise Exception("No se encontró la ID del proceso en la sesión")
+
+                payload = {
+                    "proyectoInput": {
+                        "nombre": proyecto.nombre,
+                        "descripcion": proyecto.descripcion,
+                        """
+                        #"presupuesto": float(proyecto.presupuesto or 0),
+                        #"ubicacion": proyecto.ubicacion,
+                        "fechaInicio": (
+                            proyecto.fecha_inicio.strftime("%Y-%m-%d")
+                            if proyecto.fecha_inicio else None
+                        ),
+                        """
+                        "ong": proyecto.originador.nombre if proyecto.originador else None,
+                    }
+                }
+
+                start_url = f"{url_bonita}/API/bpm/process/{process_id}/instantiation"
+                resp_start = requests.post(start_url, json=payload, cookies=cookies, headers=headers)
+
+                if resp_start.status_code == 200:
+                    print("✅ Proyecto creado también en Bonita:", resp_start.json())
+                else:
+                    print("⚠️ Error al crear en Bonita:", resp_start.text)
+
+            except Exception as e:
+                print("❌ No se pudo sincronizar con Bonita:", e)
+
             return redirect("cargar_etapas", proyecto_id=proyecto.id)
+
     else:
         proyecto_form = ProyectoForm()
 
-    return render(request, "proyecto_crear.html", {
-        "proyecto_form": proyecto_form,
-    })
+    return render(request, "proyecto_crear.html", {"proyecto_form": proyecto_form})
+
 
 def iniciar_proceso_bonita(proyecto):
     url = "http://localhost:8080/bonita/API/bpm/process/PROJECT_ID/instantiation"
