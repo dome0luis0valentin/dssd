@@ -115,7 +115,10 @@ def crear_proyecto(request):
 
 def etapas_proyecto(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-    etapas = Etapa.objects.filter(proyecto=proyecto)
+    
+    # Traemos todas las etapas del proyecto y sus pedidos relacionados (si existen)
+    etapas = Etapa.objects.filter(proyecto=proyecto).select_related('pedido', 'pedido__tipo_cobertura')
+    
     return render(request, 'listado_etapas.html', {
         'proyecto': proyecto,
         'etapas': etapas,

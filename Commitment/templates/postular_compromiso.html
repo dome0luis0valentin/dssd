@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Postular Compromiso para: {{ pedido.tipo_cobertura.nombre }}</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="mb-3">
+        {{ form.tipo.label_tag }}<br>
+        {{ form.tipo }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.detalle.label_tag }}<br>
+        {{ form.detalle }}
+    </div>
+
+    <div class="mb-3" id="fechas-parciales" style="display: none;">
+        {{ form.fecha_inicio.label_tag }}<br>
+        {{ form.fecha_inicio }}
+        <br>
+        {{ form.fecha_fin.label_tag }}<br>
+        {{ form.fecha_fin }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.responsable.label_tag }}<br>
+        {{ form.responsable }}
+    </div>
+
+    <button type="submit" class="btn btn-success">Postular</button>
+</form>
+
+<script>
+const tipoField = document.getElementById('id_tipo');
+const fechasDiv = document.getElementById('fechas-parciales');
+
+function toggleFechas() {
+    if (tipoField.value === 'parcial') {
+        fechasDiv.style.display = 'block';
+    } else {
+        fechasDiv.style.display = 'none';
+    }
+}
+
+// Inicializar
+toggleFechas();
+tipoField.addEventListener('change', toggleFechas);
+</script>
+{% endblock %}
