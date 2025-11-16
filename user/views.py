@@ -8,25 +8,23 @@ from user.models import User
 from .wraps import session_required
 import requests
 
+DEFAULT_USER_BONITA = "walter.bates"
 url_bonita = "http://localhost:8080/bonita"
 
 # Login en Bonita
 def bonita_login(request, user_email, user_password):
     url = f"{url_bonita}/loginservice"
+
     payload = {
         "username": user_email,
         "password": user_password,
         "redirect": "false",
     }
 
+    print(f"Intentando login en Bonita con usuario: {user_email} password: {user_password}")
+
     session = requests.Session()
     response = session.post(url, data=payload)
-    
-    # Parte de debug
-    print("STATUS:", response.status_code)
-    print("COOKIES:", session.cookies.get_dict())
-    print("BODY:", response.text)
-    # Fin parte de debug
     
     if response.status_code == 204:
         request.session["cookies"] = session.cookies.get_dict()
@@ -37,7 +35,7 @@ def bonita_login(request, user_email, user_password):
         print("Login exitoso")
         return session
     else:
-        raise Exception("Error al loguearse en Bonita", response.text)
+        raise Exception("Error al loguearse en Bonita", response.text, response.status_code, response)
 
 # Login de Django
 def login_view(request):
@@ -50,7 +48,6 @@ def login_view(request):
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
-                print("acase rompio")
                 messages.error(request, "Usuario no encontrado")
                 return redirect("login")
             
@@ -58,13 +55,18 @@ def login_view(request):
                 # Guardamos en session el login local
                 request.session["user_id"] = user.id
                 request.session["user_name"] = f"{user.nombre} {user.apellido}"
-                print(email)
-                if email == "walter.bates@correo.com":
-                    email = "walter.bates"
-                    
+
+                # Mapear usuarios de Django a usuarios de Bonita
+                bonita_username = email
+                bonita_password = password
+                
+                if email == "walter.bates@acme.com":
+                    bonita_username = "install"
+                    bonita_password = "install"
+
                 # Intentamos login en Bonita
-                if bonita_login(request, email, password):
-                    return render(request,'home.html',{"user_name": request.session.get("user_name")})
+                if bonita_login(request, bonita_username, bonita_password):
+                    return render(request, 'home.html', {"user_name": request.session.get("user_name")})
                 else:
                     messages.error(request, "Error al loguearse en Bonita")
                     return redirect("login")
@@ -212,28 +214,13 @@ def llenar_datos_proceso(request):
 
 @session_required
 def perfil(request):
-    # 1️⃣ Verificamos sesión
-    user_id = request.session.get("user_id")
-    if not user_id:
-        return redirect("login_user")  # redirige al login si no hay sesión
+    # 1️⃣ Verificamos sesión y obtenemos contexto
+    from .utils import get_user_context
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
 
-    # 2️⃣ Obtenemos el usuario
-    usuario = User.objects.get(id=user_id)
-
-    # 3️⃣ Obtenemos el consejo (puede ser None)
-    consejo = usuario.consejo if usuario.consejo else None
-
-    # 4️⃣ Obtenemos la ONG del usuario
-    ong = usuario.ong  # usando el related_name='ongs' en ONG
-
-    # 5️⃣ Contexto para el template
-    context = {
-        "usuario": usuario,
-        "consejo": consejo,
-        "ong": ong
-    }
-
-    return render(request, "perfil.html", context)
+    return render(request, "perfil.html", user_context)
 
 # cerrar sesion
 def logout_view(request):

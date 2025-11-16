@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="bi bi-speedometer2"></i> Dashboard
+                {% if dashboard_type == 'gerencial' %}
+                    <span class="badge bg-danger ms-2">Gerencial</span>
+                {% elif dashboard_type == 'ong_originante' %}
+                    <span class="badge bg-primary ms-2">ONG Originante</span>
+                {% elif dashboard_type == 'ong_colaboradora' %}
+                    <span class="badge bg-success ms-2">ONG Colaboradora</span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">Bienvenido, {{ current_user.nombre }} {{ current_user.apellido }}</p>
+        </div>
+    </div>
+
+    {% if dashboard_type == 'gerencial' %}
+        <!-- Dashboard Gerencial -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-header">
+                        <i class="bi bi-folder"></i> Total Proyectos
+                    </div>
+                    <div class="card-body">
+                        <h2 class="card-title">{{ proyectos_stats.total }}</h2>
+                        <p class="card-text">Proyectos en el sistema</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-header">
+                        <i class="bi bi-hourglass-split"></i> En Proceso
+                    </div>
+                    <div class="card-body">
+                        <h2 class="card-title">{{ proyectos_stats.en_proceso }}</h2>
+                        <p class="card-text">Buscando colaboración</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-header">
+                        <i class="bi bi-play-circle"></i> En Ejecución
+                    </div>
+                    <div class="card-body">
+                        <h2 class="card-title">{{ proyectos_stats.en_ejecucion }}</h2>
+                        <p class="card-text">Ejecutándose</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-header">
+                        <i class="bi bi-check-circle"></i> Finalizados
+                    </div>
+                    <div class="card-body">
+                        <h2 class="card-title">{{ proyectos_stats.finalizados }}</h2>
+                        <p class="card-text">Completados</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-clock-history"></i> Proyectos Recientes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if proyectos_recientes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Proyecto</th>
+                                        <th>Estado</th>
+                                        <th>Originador</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for proyecto in proyectos_recientes %}
+                                    <tr>
+                                        <td>{{ proyecto.nombre }}</td>
+                                        <td>
+                                            {% if proyecto.estado == 'proceso' %}
+                                                <span class="badge bg-info">En proceso</span>
+                                            {% elif proyecto.estado == 'ejecucion' %}
+                                                <span class="badge bg-warning">En ejecución</span>
+                                            {% elif proyecto.estado == 'finalizado' %}
+                                                <span class="badge bg-success">Finalizado</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ proyecto.originador.nombre }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">No hay proyectos recientes</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-building"></i> ONGs Más Activas</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if ongs_activas %}
+                        <ul class="list-group list-group-flush">
+                            {% for ong in ongs_activas %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ ong.nombre }}
+                                <span class="badge bg-primary rounded-pill">{{ ong.proyectos_count }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">No hay datos disponibles</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif dashboard_type == 'ong_originante' %}
+        <!-- Dashboard ONG Originante -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary">
+                    <div class="card-header">Mis Proyectos</div>
+                    <div class="card-body">
+                        <h2>{{ mis_stats.total }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info">
+                    <div class="card-header">En Proceso</div>
+                    <div class="card-body">
+                        <h2>{{ mis_stats.en_proceso }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning">
+                    <div class="card-header">En Ejecución</div>
+                    <div class="card-body">
+                        <h2>{{ mis_stats.en_ejecucion }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success">
+                    <div class="card-header">Finalizados</div>
+                    <div class="card-body">
+                        <h2>{{ mis_stats.finalizados }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-folder"></i> Mis Proyectos Recientes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if proyectos_recientes %}
+                        {% for proyecto in proyectos_recientes %}
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">{{ proyecto.nombre }}</h6>
+                                    {% if proyecto.estado == 'proceso' %}
+                                        <span class="badge bg-info">En proceso</span>
+                                    {% elif proyecto.estado == 'ejecucion' %}
+                                        <span class="badge bg-warning">En ejecución</span>
+                                    {% elif proyecto.estado == 'finalizado' %}
+                                        <span class="badge bg-success">Finalizado</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ proyecto.descripcion|truncatechars:100 }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No tienes proyectos recientes</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-handshake"></i> Colaboraciones Recientes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if colaboraciones_recibidas %}
+                        {% for colaboracion in colaboraciones_recibidas %}
+                        <div class="mb-2">
+                            <strong>{{ colaboracion.responsable.nombre }}</strong>
+                            <br>
+                            <small class="text-muted">{{ colaboracion.detalle|truncatechars:50 }}</small>
+                        </div>
+                        <hr>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No hay colaboraciones recientes</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% elif dashboard_type == 'ong_colaboradora' %}
+        <!-- Dashboard ONG Colaboradora -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-primary">
+                    <div class="card-header">Mis Compromisos</div>
+                    <div class="card-body">
+                        <h2>{{ compromisos_stats.total }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-warning">
+                    <div class="card-header">Pendientes</div>
+                    <div class="card-body">
+                        <h2>{{ compromisos_stats.pendientes }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-header">Completados</div>
+                    <div class="card-body">
+                        <h2>{{ compromisos_stats.completados }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-check-circle"></i> Mis Compromisos Activos</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if mis_compromisos %}
+                        {% for compromiso in mis_compromisos %}
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <h6 class="mb-1">{{ compromiso.tipo|title }} - {{ compromiso.detalle|truncatechars:50 }}</h6>
+                                <small class="text-muted">
+                                    Inicio: {{ compromiso.fecha_inicio }}
+                                    {% if compromiso.fecha_fin %} - Fin: {{ compromiso.fecha_fin }}{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No tienes compromisos activos</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-search"></i> Oportunidades de Colaboración</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if pedidos_disponibles %}
+                        {% for pedido in pedidos_disponibles %}
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <h6 class="mb-1">{{ pedido.tipo_cobertura.nombre }}</h6>
+                                <small class="text-muted">Proyecto disponible para colaborar</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No hay oportunidades de colaboración disponibles</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+
+    <!-- Acciones Rápidas -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if user_permissions.can_create_projects %}
+                        <a href="{% url 'crear_proyecto' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Crear Proyecto
+                        </a>
+                        {% endif %}
+                        
+                        {% if user_permissions.can_view_all_projects %}
+                        <a href="{% url 'proyecto' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-folder"></i> Ver Todos los Proyectos
+                        </a>
+                        {% endif %}
+                        
+                        {% if user_permissions.can_create_observations %}
+                        <a href="#" class="btn btn-warning">
+                            <i class="bi bi-eye"></i> Crear Observación
+                        </a>
+                        {% endif %}
+                        
+                        {% if user_permissions.can_view_reports %}
+                        <a href="#" class="btn btn-info">
+                            <i class="bi bi-graph-up"></i> Ver Reportes
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

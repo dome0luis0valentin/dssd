@@ -3,10 +3,96 @@
 {% block title %}Bienvenido a la aplicación DSSD{% endblock %}
 
 {% block content %}
-    <h1>Bienvenido a la aplicación DSSD</h1>
-    {% if user_name %}
-        <span class="navbar-text me-2">Hola, {{ user_name }}</span>
+<div class="container text-center py-5">
+    {% if current_user %}
+        <!-- Usuario logueado - mostrar acceso al dashboard -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h1 class="display-4 mb-4">
+                    <i class="bi bi-building"></i> Bienvenido a DSSD
+                </h1>
+                <p class="lead mb-4">
+                    Sistema de Gestión de Proyectos Colaborativos para ONGs
+                </p>
+                
+                <div class="card shadow-lg">
+                    <div class="card-body p-5">
+                        <h3>Hola, {{ current_user.nombre }} {{ current_user.apellido }}</h3>
+                        <p class="text-muted mb-4">
+                            {% if user_role == 'gerencial' %}
+                                Acceso como <strong>Usuario Gerencial</strong> - Tienes permisos completos para supervisar y gestionar proyectos.
+                            {% elif user_role == 'ong_originante' %}
+                                Acceso como <strong>ONG Originante</strong> - Puedes crear y gestionar proyectos para tu organización.
+                            {% elif user_role == 'ong_colaboradora' %}
+                                Acceso como <strong>ONG Colaboradora</strong> - Puedes participar y colaborar en proyectos de otras ONGs.
+                            {% else %}
+                                Bienvenido al sistema. Por favor, contacta al administrador para configurar tu rol.
+                            {% endif %}
+                        </p>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg me-md-2">
+                                <i class="bi bi-speedometer2"></i> Ir al Dashboard
+                            </a>
+                            {% if user_permissions.can_view_all_projects %}
+                            <a href="{% url 'proyecto' %}" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-folder"></i> Ver Proyectos
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- Usuario no logueado - página de bienvenida -->
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <h1 class="display-3 mb-4">
+                    <i class="bi bi-building"></i> DSSD
+                </h1>
+                <p class="lead mb-5">
+                    Sistema de Gestión de Proyectos Colaborativos para Organizaciones No Gubernamentales
+                </p>
+                
+                <div class="row g-4 mb-5">
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-plus-circle display-4 text-primary mb-3"></i>
+                                <h5 class="card-title">Crear Proyectos</h5>
+                                <p class="card-text">Las ONGs pueden crear proyectos de mejora de habitabilidad y solicitar colaboración de la red.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-handshake display-4 text-success mb-3"></i>
+                                <h5 class="card-title">Colaboración</h5>
+                                <p class="card-text">Red de ONGs que se ayudan mutuamente con recursos, materiales y mano de obra.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="bi bi-eye display-4 text-warning mb-3"></i>
+                                <h5 class="card-title">Supervisión</h5>
+                                <p class="card-text">Consejo directivo supervisa proyectos y proporciona observaciones para mejoras.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                    <a href="{% url 'login' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+                    </a>
+                </div>
+            </div>
+        </div>
     {% endif %}
-    <p>INFROMACION SOBRE LA APLICACION</p>
+</div>
 {% endblock %}
 
