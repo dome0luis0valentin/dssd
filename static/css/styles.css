@@ -1,0 +1,184 @@
+/* ==========================================================================
+   DSSD - Estilos personalizados
+   ========================================================================== */
+
+/* Variables CSS para colores y espaciado */
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --dark-color: #212529;
+    --light-color: #f8f9fa;
+}
+
+/* Estilos generales */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar personalizado */
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+/* Dropdowns mejorados */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+}
+
+.dropdown-item {
+    padding: 0.75rem 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background-color: var(--light-color);
+    transform: translateX(5px);
+}
+
+/* Cards mejoradas */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Badges personalizados */
+.badge {
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Botones mejorados */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+/* Tablas responsivas */
+.table {
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--dark-color);
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+/* Dashboard específico */
+.dashboard-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+}
+
+.dashboard-card .card-title {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+/* Estados de proyectos */
+.estado-proceso {
+    background-color: var(--info-color);
+    color: white;
+}
+
+.estado-ejecucion {
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+}
+
+.estado-finalizado {
+    background-color: var(--success-color);
+    color: white;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .navbar-nav {
+        text-align: center;
+    }
+    
+    .dashboard-card .card-title {
+        font-size: 1.5rem;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Utilidades adicionales */
+.shadow-soft {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+.border-radius-lg {
+    border-radius: 1rem !important;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, var(--primary-color), var(--info-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Fix para dropdowns */
+.dropdown-toggle::after {
+    margin-left: 0.5rem;
+}
+
+.dropdown-menu.show {
+    display: block !important;
+}
+
+/* Mejoras específicas para el header */
+.navbar-nav .nav-link {
+    transition: all 0.3s ease;
+    border-radius: 0.25rem;
+    margin: 0 0.25rem;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.navbar .badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}

@@ -1,19 +1,69 @@
 {% load static %}
+{{ ESTO_VA_A_CAUSAR_ERROR }}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container-fluid">
-    <a class="navbar-brand" href="{% url 'home' %}">DSSD</a>
+    <a class="navbar-brand" href="{% url 'home' %}">
+      <i class="bi bi-building"></i> DSSD
+    </a>
 
-    <div class="d-flex">
-      {% if user_name %}
-        <a class="btn btn-outline-light me-2" href="{% url 'proyecto' %}">Proyectos</a>
-        <a class="btn btn-outline-light me-2" href="{% url 'perfil' %}">Ver Perfil</a>
-        <a class="btn btn-outline-danger" href="{% url 'logout' %}">Cerrar Sesión</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      {% if current_user %}
+        <!-- Menú principal basado en rol -->
+        <ul class="navbar-nav me-auto">
+          {% for item in navigation_menu %}
+          <li class="nav-item">
+            <a class="nav-link {% if item.active %}active{% endif %}" href="{% url item.url %}">
+              <i class="{{ item.icon }} me-1"></i>{{ item.label }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <!-- Información del usuario y logout -->
+        <div class="d-flex align-items-center">
+          <!-- Badge del rol -->
+          {% if user_role == 'gerencial' %}
+            <span class="badge bg-danger me-3">
+              <i class="bi bi-shield-check"></i> Gerencial
+            </span>
+          {% elif user_role == 'ong_originante' %}
+            <span class="badge bg-primary me-3">
+              <i class="bi bi-star"></i> ONG Originante
+            </span>
+          {% elif user_role == 'ong_colaboradora' %}
+            <span class="badge bg-success me-3">
+              <i class="bi bi-handshake"></i> ONG Colaboradora
+            </span>
+          {% endif %}
+
+          
+          <!-- Menú del usuario simplificado -->
+          <div class="dropdown gap-2">
+            <button class="btn btn-outline-light dropdown-toggle gap-2" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle"></i> {{ current_user.nombre }}
+            </button>
+          </div>
+            <!-- <ul class="dropdown-menu"> -->
+            <a class="btn btn-outline-light text-nowrap me-2 gap-2" href="{% url 'perfil' %}">Ver Perfil</a><a class="btn btn-outline-light text-nowrap" href="{% url 'logout' %}">Cerrar Sesión</a>
+          <!-- </ul> -->
+        </div>
       {% else %}
-        {% if request.path == '/' %}
-          <a class="btn btn-outline-light me-2" href="{% url 'login' %}">Iniciar Sesión</a>
-        {% else %}
-          <a class="btn btn-outline-light me-2" href="{% url 'home' %}">Home</a>
-        {% endif %}
+        <!-- Menú para usuarios no logueados -->
+        <div class="d-flex ms-auto">
+          {% if request.path == '/' %}
+            <a class="btn btn-outline-light" href="{% url 'login' %}">
+              <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
+            </a>
+          {% else %}
+            <a class="btn btn-outline-light" href="{% url 'home' %}">
+              <i class="bi bi-house"></i> Inicio
+            </a>
+          {% endif %}
+        </div>
       {% endif %}
     </div>
   </div>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Colaboraciones - DSSD{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-handshake"></i> Colaboraciones</h1>
+            <p class="text-muted">Oportunidades de colaboración y proyectos en los que participas</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-search"></i> Oportunidades de Colaboración</h5>
+                </div>
+                <div class="card-body">
+                    {% if pedidos_disponibles %}
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Tipo de Cobertura</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pedido in pedidos_disponibles %}
+                                <tr>
+                                    <td>{{ pedido.tipo_cobertura.nombre }}</td>
+                                    <td>
+                                        <span class="badge bg-warning">Disponible</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success">Comprometerse</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No hay oportunidades de colaboración disponibles actualmente.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-folder"></i> Proyectos donde Participas</h5>
+                </div>
+                <div class="card-body">
+                    {% if proyectos_participando %}
+                    {% for proyecto in proyectos_participando %}
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="mb-1">{{ proyecto.nombre }}</h6>
+                            <small class="text-muted">{{ proyecto.descripcion|truncatechars:60 }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted">No participas en ningún proyecto actualmente.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
