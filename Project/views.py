@@ -41,7 +41,10 @@ def index(request):
             print("⚠️ Error al obtener IDs de procesos:", e)
 
     # 🔹 2️⃣ Obtener proyectos desde tu base de datos local
-    proyectos = Proyecto.objects.all().order_by("-id")
+    user_id = request.session.get("user_id")
+    user = User.objects.get(id=user_id)
+    user_ong = user.ong
+    proyectos = Proyecto.objects.exclude(originador=user_ong ).order_by("-id")
 
     # 🔹 3️⃣ Paginación
     paginator = Paginator(proyectos, 5)

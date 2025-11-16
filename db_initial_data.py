@@ -24,10 +24,10 @@ for i in range(1, 6):
             nombre="Walter",
             apellido="Bates",
             edad=25 + i,
-            email="walter.bates@acme.com"
+            email="walter.bates@correo.com"
             )
         usuario.ong = ong
-        usuario.set_password("bpm")
+        usuario.set_password("admin")
         usuario.save()
     
     usuario = User.objects.create(

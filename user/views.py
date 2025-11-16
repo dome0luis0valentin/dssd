@@ -62,7 +62,6 @@ def login_view(request):
                 
                 if email == "walter.bates@correo.com":
                     bonita_username = "walter.bates"
-                    bonita_password = "admin"
 
                 # Intentamos login en Bonita
                 if bonita_login(request, bonita_username, bonita_password):
