@@ -12,16 +12,16 @@ DEFAULT_USER_BONITA = "walter.bates"
 url_bonita = "http://localhost:8080/bonita"
 
 # Login en Bonita
-def bonita_login(request, user_email, user_password):
+def bonita_login(request, bonita_username, bonita_password):
     url = f"{url_bonita}/loginservice"
 
     payload = {
-        "username": user_email,
-        "password": user_password,
+        "username": bonita_username,
+        "password": bonita_password,
         "redirect": "false",
     }
 
-    print(f"Intentando login en Bonita con usuario: {user_email} password: {user_password}")
+    print(f"Intentando login en Bonita con usuario: {bonita_username} password: {bonita_password}")
 
     session = requests.Session()
     response = session.post(url, data=payload)
@@ -31,7 +31,7 @@ def bonita_login(request, user_email, user_password):
         request.session["headers"] = {
             "X-Bonita-API-Token": session.cookies.get("X-Bonita-API-Token")
         }
-        request.session["username_bonita"] = user_email
+        request.session["username_bonita"] = bonita_username
         print("Login exitoso")
         return session
     else:
@@ -56,18 +56,16 @@ def login_view(request):
                 request.session["user_id"] = user.id
                 request.session["user_name"] = f"{user.nombre} {user.apellido}"
 
-                # Mapear usuarios de Django a usuarios de Bonita
-                bonita_username = email
+                # Usamos el username real para Bonita
+                bonita_username = user.username
                 bonita_password = password
-                
-                if email == "walter.bates@acme.com":
-                    bonita_username = "install"
-                    bonita_password = "install"
 
                 # Intentamos login en Bonita
-                if bonita_login(request, bonita_username, bonita_password):
+                try:
+                    bonita_login(request, bonita_username, bonita_password)
                     return render(request, 'home.html', {"user_name": request.session.get("user_name")})
-                else:
+                except Exception as e:
+                    print("❌ Error Bonita:", e)
                     messages.error(request, "Error al loguearse en Bonita")
                     return redirect("login")
             else:
@@ -76,7 +74,6 @@ def login_view(request):
         form = LoginForm()
     
     return render(request, "login.html", {"form": form})
-
 """
 def lista_procesos_disponibles(request):
     procesos = []

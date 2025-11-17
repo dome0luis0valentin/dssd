@@ -14,7 +14,7 @@ def index(request):
     # 🔹 1️⃣ Guardar las IDs de procesos en sesión (para usarlas luego en crear_proyecto)
     cookies = request.session.get("cookies", {})
     headers = request.session.get("headers", {})
-
+    
     if cookies and headers:
         session = requests.Session()
         for name, value in cookies.items():
@@ -36,12 +36,14 @@ def index(request):
             if resp_obs.status_code == 200 and resp_obs.json():
                 request.session["process_id_ciclo_observacion"] = resp_obs.json()[0]["id"]
                 print(f"✅ Ciclo de Observaciones -> ID: {resp_obs.json()[0]['id']}")
-
         except Exception as e:
             print("⚠️ Error al obtener IDs de procesos:", e)
 
     # 🔹 2️⃣ Obtener proyectos desde tu base de datos local
-    proyectos = Proyecto.objects.all().order_by("-id")
+    user_id = request.session.get("user_id")
+    user = User.objects.get(id=user_id)
+    user_ong = user.ong
+    proyectos = Proyecto.objects.exclude(originador=user_ong ).order_by("-id")
 
     # 🔹 3️⃣ Paginación
     paginator = Paginator(proyectos, 5)
@@ -67,8 +69,8 @@ def crear_proyecto(request):
             try:
                 cookies = request.session.get("cookies")
                 headers = request.session.get("headers")
-                process_id_proyecto = request.session.get("process_id_proyecto")  # 🔹 Ciclo de Vida
-                process_id_observacion = request.session.get("process_id_observacion")  # 🔹 Ciclo de Observación
+                process_id_proyecto = request.session.get("process_id_ciclo_vida")
+                process_id_observacion = request.session.get("process_id_ciclo_observacion")
 
                 if not cookies or not headers:
                     raise Exception("No hay sesión de Bonita activa")
@@ -115,7 +117,10 @@ def crear_proyecto(request):
 
 def etapas_proyecto(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-    etapas = Etapa.objects.filter(proyecto=proyecto)
+    
+    # Traemos todas las etapas del proyecto y sus pedidos relacionados (si existen)
+    etapas = Etapa.objects.filter(proyecto=proyecto).select_related('pedido', 'pedido__tipo_cobertura')
+    
     return render(request, 'listado_etapas.html', {
         'proyecto': proyecto,
         'etapas': etapas,

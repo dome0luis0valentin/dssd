@@ -8,6 +8,7 @@
     <thead>
         <tr>
             <th>Nombre</th>
+            <th>Tipo de Pedido</th>
             <th>Descripción</th>
             <th>Fecha inicio</th>
             <th>Fecha fin</th>
@@ -18,12 +19,12 @@
         {% for etapa in etapas %}
         <tr>
             <td>{{ etapa.nombre }}</td>
+            <td>{{ etapa.pedido.tipo_cobertura.nombre }}</td>
             <td>{{ etapa.descripcion|default:"(Sin descripción)" }}</td>
             <td>{{ etapa.fecha_inicio }}</td>
             <td>{{ etapa.fecha_fin|default:"(En curso)" }}</td>
             <td>
-                <form method="post" action="">
-                    {% csrf_token %}
+                <form method="get" action="{% url 'postular_compromiso' pedido_id=etapa.pedido.id %}">
                     <button type="submit" class="btn btn-sm btn-success">Postular</button>
                 </form>
             </td>

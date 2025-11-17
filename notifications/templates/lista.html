@@ -1,0 +1,11 @@
+<!-- templates/notificaciones/lista.html -->
+<ul class="list-group">
+  {% for notificacion in request.user.notificaciones.all %}
+    <li class="list-group-item {% if notificacion.leida %}text-muted{% endif %}">
+      {{ notificacion.mensaje }}
+      <small class="text-end d-block">{{ notificacion.fecha|date:"d/m/Y H:i" }}</small>
+    </li>
+  {% empty %}
+    <li class="list-group-item">No hay notificaciones.</li>
+  {% endfor %}
+</ul>

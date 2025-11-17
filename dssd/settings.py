@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'Project',
     'Stage',
     'TypeCoverage',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -73,6 +74,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'user.context_processors.user_menu_context',  # 🔹 Añadido
+                'user.context_processors.notificaciones_context',
             ],
         },
     },
