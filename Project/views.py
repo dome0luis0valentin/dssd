@@ -14,7 +14,7 @@ def index(request):
     # 🔹 1️⃣ Guardar las IDs de procesos en sesión (para usarlas luego en crear_proyecto)
     cookies = request.session.get("cookies", {})
     headers = request.session.get("headers", {})
-
+    
     if cookies and headers:
         session = requests.Session()
         for name, value in cookies.items():
@@ -36,7 +36,6 @@ def index(request):
             if resp_obs.status_code == 200 and resp_obs.json():
                 request.session["process_id_ciclo_observacion"] = resp_obs.json()[0]["id"]
                 print(f"✅ Ciclo de Observaciones -> ID: {resp_obs.json()[0]['id']}")
-
         except Exception as e:
             print("⚠️ Error al obtener IDs de procesos:", e)
 
@@ -70,8 +69,8 @@ def crear_proyecto(request):
             try:
                 cookies = request.session.get("cookies")
                 headers = request.session.get("headers")
-                process_id_proyecto = request.session.get("process_id_proyecto")  # 🔹 Ciclo de Vida
-                process_id_observacion = request.session.get("process_id_observacion")  # 🔹 Ciclo de Observación
+                process_id_proyecto = request.session.get("process_id_ciclo_vida")
+                process_id_observacion = request.session.get("process_id_ciclo_observacion")
 
                 if not cookies or not headers:
                     raise Exception("No hay sesión de Bonita activa")
