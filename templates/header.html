@@ -1,5 +1,4 @@
 {% load static %}
-{{ ESTO_VA_A_CAUSAR_ERROR }}
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
   <div class="container-fluid">
     <a class="navbar-brand" href="{% url 'home' %}">
@@ -39,8 +38,35 @@
               <i class="bi bi-handshake"></i> ONG Colaboradora
             </span>
           {% endif %}
+          <!-- 🔔 Notificaciones -->
+          <div class="dropdown me-3">
+            <a class="btn btn-outline-warning position-relative dropdown-toggle" href="{% url 'lista_notificaciones' %}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-bell-fill"></i>
+              {% if cantidad_notificaciones > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {{ cantidad_notificaciones }}
+                </span>
+              {% endif %}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              {% if notificaciones_no_leidas %}
+                {% for noti in notificaciones_no_leidas|slice:":5" %}
+                  <li>
+                    <a class="dropdown-item" href="{{ noti.url }}">{{ noti.mensaje|truncatechars:50 }}</a>
+                  </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item text-center text-primary" href="{% url 'lista_notificaciones' %}">
+                    Ver todas las notificaciones
+                  </a>
+                </li>
+              {% else %}
+                <li><span class="dropdown-item text-muted">Sin notificaciones</span></li>
+              {% endif %}
+            </ul>
+          </div>
 
-          
           <!-- Menú del usuario simplificado -->
           <div class="dropdown gap-2">
             <button class="btn btn-outline-light dropdown-toggle gap-2" type="button" data-bs-toggle="dropdown">

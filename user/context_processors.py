@@ -2,6 +2,8 @@
 Context processors para añadir datos globales a todos los templates
 """
 from user.models import User
+from notifications.models import Notificacion  # Ajustá el import según tu app
+
 
 def user_menu_context(request):
     """
@@ -33,3 +35,20 @@ def user_menu_context(request):
             'user_permissions': {},
             'navigation_menu': [],
         }
+
+def notificaciones_context(request):
+    user_id = request.session.get("user_id")
+    if user_id:
+        try:
+            usuario = User.objects.get(id=user_id)
+            notificaciones = Notificacion.objects.filter(usuario=usuario, leida=False).order_by("-fecha")
+            return {
+                "notificaciones_no_leidas": notificaciones,
+                "cantidad_notificaciones": notificaciones.count()
+            }
+        except User.DoesNotExist:
+            pass
+    return {
+        "notificaciones_no_leidas": [],
+        "cantidad_notificaciones": 0
+    }

@@ -24,6 +24,7 @@ urlpatterns = [
     path('proyecto/', include('Project.urls')),
     path('etapa/', include('Stage.urls')),
     path('compromiso/', include('Commitment.urls')),
+    path('notificaciones/', include('notifications.urls')),
 
 ]
 
