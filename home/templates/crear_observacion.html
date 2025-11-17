@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Observación - {{ proyecto.nombre }} - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'interface_gerencial' %}">Interface Gerencial</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'detalle_proyecto_gerencial' proyecto.id %}">{{ proyecto.nombre }}</a></li>
+                    <li class="breadcrumb-item active">Crear Observación</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2">
+                <i class="bi bi-plus-circle"></i> Crear Observación
+                <span class="badge bg-danger ms-2">Consejo Directivo</span>
+            </h1>
+            <p class="text-muted">
+                Crear una observación para el proyecto: <strong>{{ proyecto.nombre }}</strong>
+                {% if etapa %} - Actividad: <strong>{{ etapa.nombre }}</strong>{% endif %}
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'detalle_proyecto_gerencial' proyecto.id %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Cancelar
+            </a>
+        </div>
+    </div>
+
+    <!-- Información del proyecto -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-info-circle"></i> Información del Proyecto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Nombre:</strong> {{ proyecto.nombre }}</p>
+                            <p><strong>Originador:</strong> {{ proyecto.originador.nombre }}</p>
+                            <p><strong>Estado:</strong> 
+                                {% if proyecto.estado == 'proceso' %}
+                                    <span class="badge bg-info">En proceso</span>
+                                {% elif proyecto.estado == 'ejecucion' %}
+                                    <span class="badge bg-warning text-dark">En ejecución</span>
+                                {% elif proyecto.estado == 'finalizado' %}
+                                    <span class="badge bg-success">Finalizado</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Descripción:</strong></p>
+                            <p class="text-muted">{{ proyecto.descripcion }}</p>
+                            
+                            {% if etapa %}
+                            <hr>
+                            <p><strong>Actividad específica:</strong> {{ etapa.nombre }}</p>
+                            <p class="text-muted">{{ etapa.descripcion|default:"Sin descripción" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-eye"></i> Observaciones Previas</h5>
+                </div>
+                <div class="card-body">
+                    {% if proyecto.observaciones.all %}
+                    <p class="text-muted mb-2">Este proyecto tiene {{ proyecto.observaciones.count }} observación(es):</p>
+                    {% for obs in proyecto.observaciones.all|slice:":3" %}
+                    <div class="small mb-2 p-2 bg-light rounded">
+                        <strong>Observación #{{ obs.id }}:</strong><br>
+                        {{ obs.descripcion|truncatechars:80 }}
+                    </div>
+                    {% endfor %}
+                    {% if proyecto.observaciones.count > 3 %}
+                    <small class="text-muted">... y {{ proyecto.observaciones.count|add:"-3" }} más</small>
+                    {% endif %}
+                    {% else %}
+                    <p class="text-muted">Este proyecto no tiene observaciones previas.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario para crear observación -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-pencil-square"></i> Nueva Observación</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Campo de descripción -->
+                        <div class="mb-4">
+                            <label for="descripcion" class="form-label">
+                                <strong>Descripción de la Observación *</strong>
+                            </label>
+                            <textarea 
+                                class="form-control" 
+                                id="descripcion" 
+                                name="descripcion" 
+                                rows="6" 
+                                placeholder="Describe detalladamente la observación que deseas realizar sobre este proyecto{% if etapa %} y su actividad '{{ etapa.nombre }}'{% endif %}..."
+                                required
+                            ></textarea>
+                            <div class="form-text">
+                                Proporciona una descripción clara y específica de la observación. 
+                                Esta observación será visible para el originador del proyecto 
+                                {% if etapa %}y se relacionará específicamente con la actividad "{{ etapa.nombre }}"{% endif %}.
+                            </div>
+                        </div>
+
+                        <!-- Información adicional -->
+                        <div class="alert alert-info" role="alert">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Información importante:
+                            </h6>
+                            <ul class="mb-0">
+                                <li>Esta observación será visible para la ONG originadora: <strong>{{ proyecto.originador.nombre }}</strong></li>
+                                {% if etapa %}
+                                <li>La observación se asociará específicamente a la actividad: <strong>{{ etapa.nombre }}</strong></li>
+                                {% else %}
+                                <li>Esta es una observación general sobre todo el proyecto</li>
+                                {% endif %}
+                                <li>La observación quedará registrada permanentemente en el sistema</li>
+                                <li>Podrás ver todas las observaciones desde la Interface Gerencial</li>
+                            </ul>
+                        </div>
+
+                        <!-- Botones de acción -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'detalle_proyecto_gerencial' proyecto.id %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-circle"></i> Crear Observación
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel lateral con ayuda -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightbulb"></i> Guía para Observaciones</h5>
+                </div>
+                <div class="card-body">
+                    <h6>¿Qué incluir en una observación?</h6>
+                    <ul class="small">
+                        <li><strong>Aspectos específicos</strong> a mejorar o corregir</li>
+                        <li><strong>Recomendaciones</strong> para el desarrollo del proyecto</li>
+                        <li><strong>Riesgos identificados</strong> en la ejecución</li>
+                        <li><strong>Oportunidades de mejora</strong> en el proceso</li>
+                    </ul>
+                    
+                    <h6 class="mt-3">Ejemplos de buenas observaciones:</h6>
+                    <ul class="small text-muted">
+                        <li>"Se recomienda clarificar los criterios de entrega para la etapa X"</li>
+                        <li>"Es necesario establecer un cronograma más detallado"</li>
+                        <li>"Se sugiere incluir más ONGs colaboradoras en la actividad Y"</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Resumen rápido -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5><i class="bi bi-clipboard-data"></i> Resumen Rápido</h5>
+                </div>
+                <div class="card-body">
+                    <p class="small mb-2"><strong>Proyecto:</strong> {{ proyecto.nombre }}</p>
+                    <p class="small mb-2"><strong>Originador:</strong> {{ proyecto.originador.nombre }}</p>
+                    {% if etapa %}
+                    <p class="small mb-2"><strong>Actividad:</strong> {{ etapa.nombre }}</p>
+                    <p class="small mb-2"><strong>Fecha inicio:</strong> {{ etapa.fecha_inicio }}</p>
+                    {% endif %}
+                    <p class="small mb-0"><strong>Observaciones previas:</strong> {{ proyecto.observaciones.count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript para mejorar la experiencia -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('descripcion');
+    const charCount = document.createElement('div');
+    charCount.className = 'form-text text-end';
+    textarea.parentNode.appendChild(charCount);
+    
+    function updateCharCount() {
+        const count = textarea.value.length;
+        charCount.textContent = count + ' caracteres';
+        
+        if (count < 10) {
+            charCount.className = 'form-text text-end text-danger';
+        } else if (count < 50) {
+            charCount.className = 'form-text text-end text-warning';
+        } else {
+            charCount.className = 'form-text text-end text-success';
+        }
+    }
+    
+    textarea.addEventListener('input', updateCharCount);
+    updateCharCount();
+});
+</script>
+{% endblock %}

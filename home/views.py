@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.db.models import Count, Q
+from django.contrib import messages
 from Project.models import Proyecto
 from user.models import User
 from user.wraps import session_required
@@ -43,9 +44,9 @@ def _get_gerencial_dashboard_data(usuario):
     # Estadísticas generales de proyectos
     proyectos_stats = {
         'total': Proyecto.objects.count(),
-        'en_proceso': Proyecto.objects.filter(estado='proceso').count(),
-        'en_ejecucion': Proyecto.objects.filter(estado='ejecucion').count(),
-        'finalizados': Proyecto.objects.filter(estado='finalizado').count(),
+        'en_proceso': Proyecto.objects.filter(estado='Proceso').count(),
+        'en_ejecucion': Proyecto.objects.filter(estado='Ejecucion').count(),
+        'finalizados': Proyecto.objects.filter(estado='Finalizado').count(),
     }
     
     # Proyectos recientes
@@ -89,7 +90,7 @@ def _get_ong_originante_dashboard_data(usuario):
     # Estadísticas de mis proyectos
     mis_stats = {
         'total': mis_proyectos.count(),
-        'en_proceso': mis_proyectos.filter(estado='proceso').count(),
+        'en_proceso': mis_proyectos.filter(estado='Proceso').count(),
         'en_ejecucion': mis_proyectos.filter(estado='ejecucion').count(),
         'finalizados': mis_proyectos.filter(estado='finalizado').count(),
     }
@@ -303,35 +304,232 @@ def observaciones(request):
     context = user_context.copy()
     
     if role == 'gerencial':
-        # Consejo puede crear observaciones
-        from Observation.models import Observacion
-        todas_observaciones = Observacion.objects.all().order_by('-id')
-        
-        context.update({
-            'puede_crear': True,
-            'observaciones': todas_observaciones,
-        })
+        # Redirigir a la interface gerencial completa
+        return redirect('interface_gerencial')
     elif role in ['ong_originante', 'ong_colaboradora']:
         # ONGs pueden ver observaciones de sus proyectos
         from Observation.models import Observacion
         
         if role == 'ong_originante':
-            # Ver observaciones de mis proyectos
+            # Ver observaciones de mis proyectos con estadísticas
             observaciones_mis_proyectos = Observacion.objects.filter(
                 proyecto__originador=usuario.ong
-            )
+            ).select_related('proyecto', 'consejo').order_by('-fecha_creacion')
+            
+            # Estadísticas para ONG originante
+            total_observaciones = observaciones_mis_proyectos.count()
+            observaciones_pendientes = observaciones_mis_proyectos.filter(estado='pendiente').count()
+            observaciones_resueltas = observaciones_mis_proyectos.filter(estado='resuelta').count()
+            
         else:
             # Ver observaciones de proyectos donde participo
             observaciones_mis_proyectos = Observacion.objects.filter(
                 proyecto__etapas__pedido__compromisos__responsable=usuario.ong
-            ).distinct()
+            ).select_related('proyecto', 'consejo').distinct().order_by('-fecha_creacion')
+            
+            # Estadísticas para ONG colaboradora
+            total_observaciones = observaciones_mis_proyectos.count()
+            observaciones_pendientes = observaciones_mis_proyectos.filter(estado='pendiente').count()
+            observaciones_resueltas = observaciones_mis_proyectos.filter(estado='resuelta').count()
+        
+        # Proyectos únicos con observaciones
+        proyectos_con_observaciones = observaciones_mis_proyectos.values_list('proyecto', flat=True).distinct()
+        cantidad_proyectos = len(set(proyectos_con_observaciones))
         
         context.update({
             'puede_crear': False,
+            'puede_resolver': role == 'ong_originante',  # Solo originantes pueden resolver
             'observaciones': observaciones_mis_proyectos,
+            'estadisticas': {
+                'total_observaciones': total_observaciones,
+                'observaciones_pendientes': observaciones_pendientes,
+                'observaciones_resueltas': observaciones_resueltas,
+                'proyectos_con_observaciones': cantidad_proyectos,
+            }
         })
     
     return render(request, 'observaciones.html', context)
+
+@session_required
+def interface_gerencial(request):
+    """Interface gerencial para seleccionar proyectos y crear observaciones"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    # Solo usuarios gerenciales pueden acceder
+    if user_context['user_role'] != 'gerencial':
+        return redirect('dashboard')
+    
+    from Stage.models import Etapa
+    from Observation.models import Observacion
+    
+    # Obtener todos los proyectos en progreso
+    proyectos_en_progreso = Proyecto.objects.filter(
+        estado__in=['Proceso', 'Ejecucion']
+    ).select_related('originador').prefetch_related('etapas', 'observaciones')
+    
+    # Estadísticas para el header
+    total_proyectos = proyectos_en_progreso.count()
+    proyectos_proceso = proyectos_en_progreso.filter(estado='Proceso').count()
+    proyectos_ejecucion = proyectos_en_progreso.filter(estado='ejecucion').count()
+    total_observaciones = Observacion.objects.count()
+    
+    # Preparar información detallada de cada proyecto
+    proyectos_detalle = []
+    for proyecto in proyectos_en_progreso:
+        etapas = proyecto.etapas.all()
+        etapas_total = etapas.count()
+        etapas_completadas = etapas.filter(pedido__estado=True).count()
+        observaciones_count = proyecto.observaciones.count()
+        
+        # Obtener colaboradores únicos
+        from Commitment.models import Compromiso
+        colaboradores = Compromiso.objects.filter(
+            pedido__etapas__proyecto=proyecto
+        ).select_related('responsable').distinct()
+        
+        proyectos_detalle.append({
+            'proyecto': proyecto,
+            'etapas_total': etapas_total,
+            'etapas_completadas': etapas_completadas,
+            'progreso_porcentaje': (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0,
+            'observaciones_count': observaciones_count,
+            'colaboradores': colaboradores,
+            'ultima_observacion': proyecto.observaciones.order_by('-id').first(),
+        })
+    
+    context = user_context.copy()
+    context.update({
+        'proyectos_detalle': proyectos_detalle,
+        'stats': {
+            'total_proyectos': total_proyectos,
+            'proyectos_proceso': proyectos_proceso,
+            'proyectos_ejecucion': proyectos_ejecucion,
+            'total_observaciones': total_observaciones,
+        }
+    })
+    
+    return render(request, 'interface_gerencial.html', context)
+
+@session_required
+def detalle_proyecto_gerencial(request, proyecto_id):
+    """Vista detallada de proyecto para usuario gerencial con todas las actividades"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    # Solo usuarios gerenciales pueden acceder
+    if user_context['user_role'] != 'gerencial':
+        return redirect('dashboard')
+    
+    try:
+        proyecto = Proyecto.objects.get(id=proyecto_id)
+    except Proyecto.DoesNotExist:
+        return redirect('interface_gerencial')
+    
+    from Stage.models import Etapa
+    from Commitment.models import Compromiso
+    from Observation.models import Observacion
+    
+    # Obtener todas las etapas/actividades del proyecto
+    etapas = proyecto.etapas.all().order_by('fecha_inicio')
+    
+    # Preparar información detallada de cada etapa
+    etapas_detalle = []
+    for etapa in etapas:
+        etapa_info = {
+            'etapa': etapa,
+            'compromisos': [],
+            'estado': 'Sin solicitar',
+            'observaciones': [],
+        }
+        
+        if etapa.pedido:
+            compromisos = etapa.pedido.compromisos.all().select_related('responsable')
+            etapa_info['estado'] = 'Completado' if etapa.pedido.estado else ('Con colaborador' if compromisos.exists() else 'Solicitando colaboración')
+            etapa_info['tipo_cobertura'] = etapa.pedido.tipo_cobertura.nombre
+            etapa_info['compromisos'] = compromisos
+        
+        # Obtener observaciones específicas de esta etapa (si las hay)
+        # Por ahora las observaciones son a nivel proyecto, pero podríamos extender
+        etapas_detalle.append(etapa_info)
+    
+    # Todas las observaciones del proyecto
+    observaciones = proyecto.observaciones.all().select_related('consejo').order_by('-id')
+    
+    # Estadísticas del proyecto
+    etapas_total = etapas.count()
+    etapas_completadas = etapas.filter(pedido__estado=True).count()
+    progreso_porcentaje = (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0
+    
+    # Colaboradores únicos del proyecto
+    colaboradores_unicos = Compromiso.objects.filter(
+        pedido__etapas__proyecto=proyecto
+    ).select_related('responsable').distinct()
+    
+    context = user_context.copy()
+    context.update({
+        'proyecto': proyecto,
+        'etapas_detalle': etapas_detalle,
+        'observaciones': observaciones,
+        'etapas_total': etapas_total,
+        'etapas_completadas': etapas_completadas,
+        'progreso_porcentaje': round(progreso_porcentaje, 1),
+        'colaboradores_unicos': colaboradores_unicos,
+    })
+    
+    return render(request, 'detalle_proyecto_gerencial.html', context)
+
+@session_required
+def crear_observacion(request, proyecto_id, etapa_id=None):
+    """Crear una nueva observación para un proyecto o etapa específica"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    # Solo usuarios gerenciales pueden crear observaciones
+    if user_context['user_role'] != 'gerencial':
+        return redirect('dashboard')
+    
+    try:
+        proyecto = Proyecto.objects.get(id=proyecto_id)
+    except Proyecto.DoesNotExist:
+        return redirect('interface_gerencial')
+    
+    etapa = None
+    if etapa_id:
+        try:
+            from Stage.models import Etapa
+            etapa = Etapa.objects.get(id=etapa_id, proyecto=proyecto)
+        except Etapa.DoesNotExist:
+            pass
+    
+    if request.method == 'POST':
+        descripcion = request.POST.get('descripcion', '').strip()
+        
+        if descripcion:
+            from Observation.models import Observacion
+            
+            # Crear la observación
+            observacion = Observacion.objects.create(
+                proyecto=proyecto,
+                consejo=user_context['consejo'],
+                descripcion=descripcion
+            )
+            
+            messages.success(request, f'Observación creada exitosamente para el proyecto "{proyecto.nombre}"')
+            return redirect('detalle_proyecto_gerencial', proyecto_id=proyecto.id)
+        else:
+            messages.error(request, 'La descripción de la observación no puede estar vacía')
+    
+    context = user_context.copy()
+    context.update({
+        'proyecto': proyecto,
+        'etapa': etapa,
+    })
+    
+    return render(request, 'crear_observacion.html', context)
 
 @session_required 
 def dashboard_gerencial(request):
@@ -621,3 +819,29 @@ def reportes(request):
     })
     
     return render(request, 'reportes.html', context)
+
+@session_required
+def marcar_observacion_resuelta(request, observacion_id):
+    """Marca una observación como resuelta"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    usuario = user_context['usuario']
+    role = user_context['user_role']
+    
+    try:
+        from Observation.models import Observacion
+        observacion = Observacion.objects.get(id=observacion_id)
+        
+        # Verificar permisos - solo ONGs originantes pueden marcar como resueltas las observaciones de sus proyectos
+        if role == 'ong_originante' and observacion.proyecto.originador == usuario.ong:
+            observacion.marcar_como_resuelta()
+            messages.success(request, f'Observación marcada como resuelta para el proyecto "{observacion.proyecto.nombre}"')
+        else:
+            messages.error(request, 'No tienes permisos para marcar esta observación como resuelta')
+            
+    except Observacion.DoesNotExist:
+        messages.error(request, 'La observación no existe')
+    
+    return redirect('observaciones')

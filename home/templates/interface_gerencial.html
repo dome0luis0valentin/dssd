@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Interface Gerencial - Observaciones - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="bi bi-shield-check"></i> Interface Gerencial
+                <span class="badge bg-danger ms-2">Consejo Directivo</span>
+            </h1>
+            <p class="text-muted">Seleccionar proyectos y actividades para observar y supervisar</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-header">
+                    <i class="bi bi-folder"></i> Proyectos Activos
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ stats.total_proyectos }}</h2>
+                    <p class="card-text">En seguimiento</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-header">
+                    <i class="bi bi-hourglass-split"></i> En Proceso
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ stats.proyectos_proceso }}</h2>
+                    <p class="card-text">Buscando colaboración</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-header">
+                    <i class="bi bi-play-circle"></i> En Ejecución
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ stats.proyectos_ejecucion }}</h2>
+                    <p class="card-text">Ejecutándose</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-header">
+                    <i class="bi bi-eye"></i> Observaciones
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ stats.total_observaciones }}</h2>
+                    <p class="card-text">Total realizadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Proyectos para Observar -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-list-ul"></i> Proyectos en Progreso - Seleccionar para Observar</h5>
+                </div>
+                <div class="card-body">
+                    {% if proyectos_detalle %}
+                    {% for proyecto_info in proyectos_detalle %}
+                    <div class="card mb-3 border-start border-5 {% if proyecto_info.proyecto.estado == 'proceso' %}border-info{% else %}border-warning{% endif %}">
+                        <div class="card-header">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="mb-0">{{ proyecto_info.proyecto.nombre }}</h6>
+                                    <small class="text-muted">
+                                        Originador: {{ proyecto_info.proyecto.originador.nombre }}
+                                    </small>
+                                </div>
+                                <div class="col-auto">
+                                    {% if proyecto_info.proyecto.estado == 'proceso' %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-hourglass-split"></i> En proceso
+                                        </span>
+                                    {% elif proyecto_info.proyecto.estado == 'ejecucion' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-play-circle"></i> En ejecución
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Información del proyecto -->
+                                <div class="col-md-4">
+                                    <p class="mb-2">{{ proyecto_info.proyecto.descripcion|truncatechars:100 }}</p>
+                                    
+                                    <!-- Progreso -->
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">Progreso</small>
+                                            <small class="fw-bold">{{ proyecto_info.progreso_porcentaje|floatformat:1 }}%</small>
+                                        </div>
+                                        <div class="progress" style="height: 8px;">
+                                            <div class="progress-bar {% if proyecto_info.progreso_porcentaje == 100 %}bg-success{% elif proyecto_info.progreso_porcentaje > 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                                                 role="progressbar" style="width: {{ proyecto_info.progreso_porcentaje }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ proyecto_info.etapas_completadas }} de {{ proyecto_info.etapas_total }} actividades completadas</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Colaboradores -->
+                                <div class="col-md-4">
+                                    <h6 class="text-success mb-2">
+                                        <i class="bi bi-people"></i> Colaboradores ({{ proyecto_info.colaboradores|length }})
+                                    </h6>
+                                    {% if proyecto_info.colaboradores %}
+                                    <div class="d-flex flex-wrap gap-1">
+                                        {% for colaborador in proyecto_info.colaboradores|slice:":3" %}
+                                        <span class="badge bg-success">{{ colaborador.responsable.nombre }}</span>
+                                        {% endfor %}
+                                        {% if proyecto_info.colaboradores|length > 3 %}
+                                        <span class="badge bg-secondary">+{{ proyecto_info.colaboradores|length|add:"-3" }} más</span>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted small">Sin colaboradores asignados</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Observaciones y acciones -->
+                                <div class="col-md-4">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <h6 class="text-warning mb-0">
+                                            <i class="bi bi-eye"></i> Observaciones
+                                        </h6>
+                                        <span class="badge {% if proyecto_info.observaciones_count > 0 %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ proyecto_info.observaciones_count }}
+                                        </span>
+                                    </div>
+                                    
+                                    {% if proyecto_info.ultima_observacion %}
+                                    <div class="mb-2">
+                                        <small class="text-muted">Última observación:</small>
+                                        <div class="small">{{ proyecto_info.ultima_observacion.descripcion|truncatechars:60 }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <!-- Botones de acción -->
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'detalle_proyecto_gerencial' proyecto_info.proyecto.id %}" class="btn btn-primary btn-sm">
+                                            <i class="bi bi-eye-fill"></i> Ver Actividades
+                                        </a>
+                                        <a href="{% url 'crear_observacion' proyecto_info.proyecto.id %}" class="btn btn-outline-warning btn-sm">
+                                            <i class="bi bi-plus-circle"></i> Crear Observación
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-folder-x display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">No hay proyectos en progreso</h4>
+                        <p class="text-muted mb-4">Actualmente no hay proyectos activos para observar</p>
+                        <a href="{% url 'proyecto' %}" class="btn btn-primary">
+                            <i class="bi bi-folder"></i> Ver Todos los Proyectos
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'proyecto' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-folder"></i> Ver Todos los Proyectos
+                        </a>
+                        
+                        <a href="{% url 'dashboard_gerencial' %}" class="btn btn-outline-info">
+                            <i class="bi bi-graph-up"></i> Dashboard Gerencial
+                        </a>
+                        
+                        <a href="{% url 'reportes' %}" class="btn btn-outline-success">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reportes
+                        </a>
+                        
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-speedometer2"></i> Dashboard Principal
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos adicionales para mejorar la visualización -->
+<style>
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.border-5 {
+    border-width: 5px !important;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

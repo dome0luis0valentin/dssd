@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Notificaciones - DSSD{% endblock %}
+{% block title %}Mis Notificaciones - DSSD{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -123,7 +123,8 @@
                                 </div>
                                 {% if notificacion.url %}
                                 <div class="mt-2">
-                                    <a href="{{ notificacion.url }}" class="btn btn-sm btn-outline-primary">
+                                    <a href="{{ notificacion.url }}" class="btn btn-sm btn-outline-primary"
+                                       onclick="marcarLeidaYNavegar(event, {{ notificacion.id }}, '{{ notificacion.url }}')">
                                         <i class="bi bi-arrow-right"></i> Ver detalles
                                     </a>
                                 </div>
@@ -193,9 +194,14 @@
                 <p class="text-muted mb-4">
                     Cuando recibas notificaciones del sistema, aparecerán aquí.
                 </p>
-                <a href="{% url 'dashboard' %}" class="btn btn-primary">
-                    <i class="bi bi-speedometer2"></i> Ir al Dashboard
-                </a>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                        <i class="bi bi-speedometer2"></i> Ir al Dashboard
+                    </a>
+                    <button onclick="crearNotificacionesPrueba()" class="btn btn-outline-info">
+                        <i class="bi bi-plus-circle"></i> Crear Notificaciones de Prueba
+                    </button>
+                </div>
             </div>
             {% endif %}
         </div>
@@ -250,6 +256,57 @@ function marcarTodasLeidas() {
                 location.reload();
             } else {
                 alert('Error al marcar las notificaciones como leídas');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        });
+    }
+}
+
+function marcarLeidaYNavegar(event, notificacionId, url) {
+    event.preventDefault();
+    
+    fetch(`/notificaciones/marcar-leida/${notificacionId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Navegar a la URL después de marcar como leída
+            window.location.href = url;
+        } else {
+            // Navegar aunque haya error
+            window.location.href = url;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Navegar aunque haya error de conexión
+        window.location.href = url;
+    });
+}
+
+function crearNotificacionesPrueba() {
+    if (confirm('¿Crear notificaciones de prueba?')) {
+        fetch('/notificaciones/crear-prueba/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                alert('Notificaciones de prueba creadas exitosamente');
+                location.reload();
+            } else {
+                alert('Error al crear las notificaciones de prueba');
             }
         })
         .catch(error => {

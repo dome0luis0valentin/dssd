@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Observaciones - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="bi bi-eye"></i> Observaciones del Consejo Directivo
+                {% if user_role == 'ong_originante' %}
+                    <span class="badge bg-primary ms-2">ONG Originante</span>
+                {% elif user_role == 'ong_colaboradora' %}
+                    <span class="badge bg-success ms-2">ONG Colaboradora</span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if user_role == 'ong_originante' %}
+                    Observaciones realizadas por el Consejo Directivo sobre tus proyectos
+                {% else %}
+                    Observaciones de proyectos en los que participas como colaborador
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver al Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-header">
+                    <i class="bi bi-eye"></i> Total Observaciones
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ estadisticas.total_observaciones }}</h2>
+                    <p class="card-text">
+                        {% if user_role == 'ong_originante' %}
+                            En tus proyectos
+                        {% else %}
+                            En proyectos donde colaboras
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-header">
+                    <i class="bi bi-exclamation-triangle"></i> Pendientes
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ estadisticas.observaciones_pendientes }}</h2>
+                    <p class="card-text">Por resolver</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-header">
+                    <i class="bi bi-check-circle"></i> Resueltas
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ estadisticas.observaciones_resueltas }}</h2>
+                    <p class="card-text">Completadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-header">
+                    <i class="bi bi-folder"></i> Proyectos
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ estadisticas.proyectos_con_observaciones }}</h2>
+                    <p class="card-text">Con observaciones</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de observaciones -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-list-ul"></i> Observaciones Recibidas</h5>
+                </div>
+                <div class="card-body">
+                    {% if observaciones %}
+                    
+                    <!-- Agrupar por proyecto -->
+                    {% regroup observaciones by proyecto as observaciones_por_proyecto %}
+                    
+                    {% for proyecto_group in observaciones_por_proyecto %}
+                    <div class="mb-4">
+                        <!-- Header del proyecto -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="text-primary mb-0">
+                                <i class="bi bi-folder"></i> {{ proyecto_group.grouper.nombre }}
+                            </h5>
+                            <div>
+                                {% if proyecto_group.grouper.estado == 'proceso' %}
+                                    <span class="badge bg-info">En proceso</span>
+                                {% elif proyecto_group.grouper.estado == 'ejecucion' %}
+                                    <span class="badge bg-warning text-dark">En ejecución</span>
+                                {% elif proyecto_group.grouper.estado == 'finalizado' %}
+                                    <span class="badge bg-success">Finalizado</span>
+                                {% endif %}
+                                <span class="badge bg-warning">{{ proyecto_group.list|length }} observación(es)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">
+                                <i class="bi bi-building"></i> Originador: {{ proyecto_group.grouper.originador.nombre }}
+                            </small>
+                            <br>
+                            <small class="text-muted">{{ proyecto_group.grouper.descripcion|truncatechars:100 }}</small>
+                        </div>
+                        
+                        <!-- Observaciones de este proyecto -->
+                        {% for observacion in proyecto_group.list %}
+                        <div class="alert {% if observacion.estado == 'resuelta' %}alert-success{% else %}alert-warning{% endif %} mb-3" role="alert">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    {% if observacion.estado == 'resuelta' %}
+                                        <i class="bi bi-check-circle fs-4"></i>
+                                    {% else %}
+                                        <i class="bi bi-exclamation-triangle fs-4"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="alert-heading d-flex justify-content-between align-items-start">
+                                        <span>
+                                            Observación del Consejo Directivo
+                                            <small class="text-muted">#{{ observacion.id }}</small>
+                                        </span>
+                                        <div class="d-flex gap-2">
+                                            {% if observacion.estado == 'resuelta' %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Resuelta
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-clock"></i> Pendiente
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </h6>
+                                    <p class="mb-2">{{ observacion.descripcion }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-person-badge"></i> 
+                                                {{ observacion.consejo.nombre|default:"Consejo Directivo" }}
+                                            </small>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar3"></i> 
+                                                {{ observacion.fecha_creacion|date:"d/m/Y H:i" }}
+                                                {% if observacion.fecha_resolucion %}
+                                                    | Resuelta: {{ observacion.fecha_resolucion|date:"d/m/Y H:i" }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        <div class="d-flex gap-2 align-items-center">
+                                            {% if user_role == 'ong_originante' %}
+                                                <span class="badge bg-primary">Tu proyecto</span>
+                                                {% if observacion.estado == 'pendiente' and puede_resolver %}
+                                                    <form method="post" action="{% url 'marcar_observacion_resuelta' observacion.id %}" class="d-inline">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-success" 
+                                                                onclick="return confirm('¿Marcar esta observación como resuelta?')">
+                                                            <i class="bi bi-check-circle"></i> Marcar Resuelta
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-success">Proyecto donde colaboras</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Enlace para ver más detalles del proyecto -->
+                        <div class="text-end mb-3">
+                            <a href="{% url 'detalle_proyecto_seguimiento' proyecto_group.grouper.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-eye"></i> Ver Detalles del Proyecto
+                            </a>
+                        </div>
+                        
+                        <hr>
+                    </div>
+                    {% endfor %}
+                    
+                    {% else %}
+                    <!-- Estado vacío -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-eye-slash display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">No hay observaciones</h4>
+                        <p class="text-muted mb-4">
+                            {% if user_role == 'ong_originante' %}
+                                Actualmente no hay observaciones del Consejo Directivo sobre tus proyectos.
+                                <br>Esto significa que tus proyectos se están desarrollando sin observaciones.
+                            {% else %}
+                                No hay observaciones en los proyectos donde participas como colaborador.
+                                <br>Los proyectos se están desarrollando según lo planificado.
+                            {% endif %}
+                        </p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            {% if user_role == 'ong_originante' %}
+                            <a href="{% url 'crear_proyecto' %}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Crear Nuevo Proyecto
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'panel_seguimiento' %}" class="btn btn-primary">
+                                <i class="bi bi-clipboard-data"></i> Ver Panel de Seguimiento
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'panel_seguimiento' %}" class="btn btn-primary">
+                            <i class="bi bi-clipboard-data"></i> Panel de Seguimiento
+                        </a>
+                        
+                        {% if user_role == 'ong_originante' %}
+                        <a href="{% url 'proyecto' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-folder"></i> Mis Proyectos
+                        </a>
+                        <a href="{% url 'crear_proyecto' %}" class="btn btn-outline-success">
+                            <i class="bi bi-plus-circle"></i> Crear Proyecto
+                        </a>
+                        {% else %}
+                        <a href="{% url 'mis_colaboraciones' %}" class="btn btn-outline-success">
+                            <i class="bi bi-handshake"></i> Mis Colaboraciones
+                        </a>
+                        <a href="{% url 'mis_compromisos' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-check-circle"></i> Mis Compromisos
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos adicionales -->
+<style>
+.alert-warning {
+    border-left: 4px solid #ff8c00;
+    background-color: #fff3cd;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

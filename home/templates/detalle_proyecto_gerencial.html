@@ -1,0 +1,364 @@
+{% extends "base.html" %}
+
+{% block title %}{{ proyecto.nombre }} - Vista Gerencial - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'interface_gerencial' %}">Interface Gerencial</a></li>
+                    <li class="breadcrumb-item active">{{ proyecto.nombre }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2">
+                <i class="bi bi-shield-check"></i> {{ proyecto.nombre }}
+                <span class="badge bg-danger ms-2">Vista Gerencial</span>
+                {% if proyecto.estado == 'proceso' %}
+                    <span class="badge bg-info ms-2">En proceso</span>
+                {% elif proyecto.estado == 'ejecucion' %}
+                    <span class="badge bg-warning text-dark ms-2">En ejecución</span>
+                {% elif proyecto.estado == 'finalizado' %}
+                    <span class="badge bg-success ms-2">Finalizado</span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">{{ proyecto.descripcion }}</p>
+            <p class="text-muted">
+                <i class="bi bi-building"></i> Originador: <strong>{{ proyecto.originador.nombre }}</strong>
+            </p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'crear_observacion' proyecto.id %}" class="btn btn-warning me-2">
+                <i class="bi bi-plus-circle"></i> Crear Observación
+            </a>
+            <a href="{% url 'interface_gerencial' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Interface
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen del proyecto -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-header">
+                    <i class="bi bi-list-task"></i> Total Actividades
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ etapas_total }}</h2>
+                    <p class="card-text">Actividades del proyecto</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-header">
+                    <i class="bi bi-check-circle"></i> Completadas
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ etapas_completadas }}</h2>
+                    <p class="card-text">Actividades finalizadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-header">
+                    <i class="bi bi-people"></i> Colaboradores
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ colaboradores_unicos|length }}</h2>
+                    <p class="card-text">ONGs colaborando</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-header">
+                    <i class="bi bi-eye"></i> Observaciones
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ observaciones|length }}</h2>
+                    <p class="card-text">Observaciones realizadas</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progreso visual -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Progreso del Proyecto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {% if progreso_porcentaje == 100 %}bg-success{% elif progreso_porcentaje > 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                             role="progressbar" style="width: {{ progreso_porcentaje }}%">
+                            <strong>{{ progreso_porcentaje }}%</strong>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Inicio del proyecto</span>
+                        <span class="fw-bold">{{ etapas_completadas }} de {{ etapas_total }} actividades completadas</span>
+                        <span class="text-muted">Finalización</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Colaboradores del proyecto -->
+    {% if colaboradores_unicos %}
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-people"></i> Colaboradores Participantes</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for colaborador in colaboradores_unicos %}
+                        <div class="col-md-4 mb-2">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-building text-success me-2"></i>
+                                <strong>{{ colaborador.responsable.nombre }}</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Detalle de actividades/etapas -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="bi bi-list-task"></i> Todas las Actividades del Proyecto</h5>
+                    <span class="badge bg-primary">{{ etapas_total }} actividades</span>
+                </div>
+                <div class="card-body">
+                    {% if etapas_detalle %}
+                    {% for etapa_info in etapas_detalle %}
+                    <div class="card mb-3 
+                        {% if etapa_info.estado == 'Completado' %}border-success
+                        {% elif etapa_info.estado == 'Con colaborador' %}border-warning
+                        {% elif etapa_info.estado == 'Solicitando colaboración' %}border-info
+                        {% else %}border-secondary
+                        {% endif %}">
+                        <div class="card-header">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-arrow-right-circle"></i> {{ etapa_info.etapa.nombre }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar"></i> 
+                                        Inicio: {{ etapa_info.etapa.fecha_inicio }}
+                                        {% if etapa_info.etapa.fecha_fin %} - Fin: {{ etapa_info.etapa.fecha_fin }}{% endif %}
+                                    </small>
+                                </div>
+                                <div class="col-auto">
+                                    {% if etapa_info.estado == 'Completado' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completado
+                                        </span>
+                                    {% elif etapa_info.estado == 'Con colaborador' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> En progreso
+                                        </span>
+                                    {% elif etapa_info.estado == 'Solicitando colaboración' %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-search"></i> Solicitando colaboración
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-question-circle"></i> Sin solicitar
+                                        </span>
+                                    {% endif %}
+                                    
+                                    <!-- Botón para crear observación específica de esta actividad -->
+                                    <a href="{% url 'crear_observacion_etapa' proyecto.id etapa_info.etapa.id %}" 
+                                       class="btn btn-outline-warning btn-sm ms-2"
+                                       title="Crear observación para esta actividad">
+                                        <i class="bi bi-plus"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2">{{ etapa_info.etapa.descripcion|default:"Sin descripción disponible" }}</p>
+                                    
+                                    {% if etapa_info.tipo_cobertura %}
+                                    <p class="mb-2">
+                                        <strong>Tipo de cobertura requerida:</strong> 
+                                        <span class="badge bg-primary">{{ etapa_info.tipo_cobertura }}</span>
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if etapa_info.compromisos %}
+                                    <h6 class="text-success mb-2">
+                                        <i class="bi bi-people"></i> Colaboradores de esta actividad
+                                    </h6>
+                                    {% for compromiso in etapa_info.compromisos %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                                        <div>
+                                            <strong>{{ compromiso.responsable.nombre }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                {{ compromiso.get_tipo_display }} - {{ compromiso.detalle|truncatechars:40 }}
+                                            </small>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-calendar-range"></i>
+                                                {{ compromiso.fecha_inicio }}
+                                                {% if compromiso.fecha_fin %} → {{ compromiso.fecha_fin }}{% endif %}
+                                            </small>
+                                        </div>
+                                        <span class="badge {% if compromiso.pedido.estado %}bg-success{% else %}bg-warning{% endif %}">
+                                            {% if compromiso.pedido.estado %}Completado{% else %}En progreso{% endif %}
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-person-x"></i> Sin colaboradores asignados a esta actividad
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-list-task display-3 text-muted"></i>
+                        <h5 class="text-muted mt-2">No hay actividades definidas</h5>
+                        <p class="text-muted">Este proyecto no tiene actividades configuradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observaciones del proyecto -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="bi bi-eye"></i> Observaciones del Consejo Directivo</h5>
+                    <a href="{% url 'crear_observacion' proyecto.id %}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-plus-circle"></i> Nueva Observación
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if observaciones %}
+                    {% for observacion in observaciones %}
+                    <div class="alert alert-warning" role="alert">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-exclamation-triangle fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="alert-heading">
+                                    Observación del Consejo Directivo
+                                    <small class="text-muted">(ID: #{{ observacion.id }})</small>
+                                </h6>
+                                <p class="mb-2">{{ observacion.descripcion }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-person-badge"></i> 
+                                        Consejo: {{ observacion.consejo.nombre|default:"Consejo Directivo" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info" role="alert">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <div>
+                                <strong>No hay observaciones para este proyecto.</strong>
+                                <p class="mb-0">El proyecto se está desarrollando sin observaciones del Consejo Directivo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'crear_observacion' proyecto.id %}" class="btn btn-warning">
+                            <i class="bi bi-plus-circle"></i> Crear Observación General
+                        </a>
+                        
+                        <a href="{% url 'interface_gerencial' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-shield-check"></i> Volver a Interface Gerencial
+                        </a>
+                        
+                        <a href="{% url 'proyecto' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-folder"></i> Ver Todos los Proyectos
+                        </a>
+                        
+                        <a href="{% url 'dashboard_gerencial' %}" class="btn btn-outline-info">
+                            <i class="bi bi-graph-up"></i> Dashboard Gerencial
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Estilos adicionales -->
+<style>
+.alert {
+    border-left: 4px solid #ff8c00;
+}
+
+.card {
+    transition: all 0.3s ease;
+}
+
+.border-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.border-warning {
+    border-left: 4px solid #ffc107 !important;
+}
+
+.border-info {
+    border-left: 4px solid #17a2b8 !important;
+}
+
+.border-secondary {
+    border-left: 4px solid #6c757d !important;
+}
+</style>
+{% endblock %}

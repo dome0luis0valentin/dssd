@@ -152,6 +152,15 @@ def get_navigation_menu(user):
             'active': False
         })
     
+    # Interface gerencial para crear observaciones
+    if permissions['can_create_observations']:
+        safe_add_menu_item(menu_items, {
+            'label': 'Interface Gerencial',
+            'url': 'interface_gerencial',
+            'icon': 'bi-shield-check',
+            'active': False
+        })
+    
     if permissions['can_view_dashboard']:
         safe_add_menu_item(menu_items, {
             'label': 'Dashboard Gerencial',
@@ -182,13 +191,20 @@ def get_user_context(request):
         from user.models import User
         usuario = User.objects.get(id=user_id)
         
+        # Obtener notificaciones no leídas para el header
+        notificaciones_no_leidas = usuario.notificaciones.filter(leida=False).order_by('-fecha')[:5]
+        cantidad_notificaciones = usuario.notificaciones.filter(leida=False).count()
+        
         return {
+            "current_user": usuario,
             "usuario": usuario,
             "consejo": usuario.consejo,
             "ong": usuario.ong,
             "user_role": get_user_role(usuario),
             "user_permissions": get_user_permissions(usuario),
             "navigation_menu": get_navigation_menu(usuario),
+            "notificaciones_no_leidas": notificaciones_no_leidas,
+            "cantidad_notificaciones": cantidad_notificaciones,
         }
     except User.DoesNotExist:
         return None

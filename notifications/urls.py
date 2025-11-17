@@ -1,7 +1,10 @@
 # notifications/urls.py
 from django.urls import path
-from .views import lista_notificaciones
+from . import views
 
 urlpatterns = [
-    path('', lista_notificaciones, name='lista_notificaciones'),
+    path('', views.lista_notificaciones, name='lista_notificaciones'),
+    path('marcar-leida/<int:notificacion_id>/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path('marcar-todas-leidas/', views.marcar_todas_leidas, name='marcar_todas_leidas'),
+    path('crear-prueba/', views.crear_notificaciones_prueba, name='crear_notificaciones_prueba'),
 ]
