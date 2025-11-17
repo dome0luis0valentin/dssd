@@ -171,54 +171,143 @@
             </div>
         </div>
 
+        <!-- Panel de Seguimiento de Proyectos Mejorado -->
         <div class="row">
-            <div class="col-md-8">
+            <div class="col-md-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5><i class="bi bi-folder"></i> Mis Proyectos Recientes</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-folder"></i> Mis Proyectos - Panel de Control</h5>
+                        <a href="{% url 'panel_seguimiento' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-clipboard-data"></i> Ver Panel Completo
+                        </a>
                     </div>
                     <div class="card-body">
-                        {% if proyectos_recientes %}
-                        {% for proyecto in proyectos_recientes %}
-                        <div class="card mb-2">
-                            <div class="card-body py-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0">{{ proyecto.nombre }}</h6>
-                                    {% if proyecto.estado == 'proceso' %}
-                                        <span class="badge bg-info">En proceso</span>
-                                    {% elif proyecto.estado == 'ejecucion' %}
-                                        <span class="badge bg-warning">En ejecución</span>
-                                    {% elif proyecto.estado == 'finalizado' %}
-                                        <span class="badge bg-success">Finalizado</span>
-                                    {% endif %}
+                        {% if proyectos_detallados %}
+                        {% for item in proyectos_detallados %}
+                        <div class="card mb-3 border-start border-5 {% if item.proyecto.estado == 'proceso' %}border-info{% elif item.proyecto.estado == 'ejecucion' %}border-warning{% else %}border-success{% endif %}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'detalle_proyecto_seguimiento' item.proyecto.id %}" class="text-decoration-none">
+                                                {{ item.proyecto.nombre }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">{{ item.proyecto.descripcion|truncatechars:80 }}</small>
+                                        <div class="mt-2">
+                                            {% if item.proyecto.estado == 'proceso' %}
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-hourglass-split"></i> En proceso
+                                                </span>
+                                            {% elif item.proyecto.estado == 'ejecucion' %}
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="bi bi-play-circle"></i> En ejecución
+                                                </span>
+                                            {% elif item.proyecto.estado == 'finalizado' %}
+                                                <span class="badge bg-success">
+                                                    <i class="bi bi-check-circle"></i> Finalizado
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Progreso del proyecto -->
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">Progreso</small>
+                                                <small class="fw-bold">{{ item.progreso_porcentaje }}%</small>
+                                            </div>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar {% if item.progreso_porcentaje == 100 %}bg-success{% elif item.progreso_porcentaje > 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                                                     style="width: {{ item.progreso_porcentaje }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ item.etapas_completadas }} de {{ item.etapas_total }} etapas completadas</small>
+                                        </div>
+                                        
+                                        <!-- Indicadores -->
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <span class="badge bg-primary">
+                                                <i class="bi bi-people"></i> {{ item.colaboraciones_activas }} colaborando
+                                            </span>
+                                            {% if item.solicitudes_pendientes > 0 %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> {{ item.solicitudes_pendientes }} pendientes
+                                            </span>
+                                            {% endif %}
+                                            {% if item.observaciones_count > 0 %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-eye"></i> {{ item.observaciones_count }} observaciones
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
-                                <small class="text-muted">{{ proyecto.descripcion|truncatechars:100 }}</small>
                             </div>
                         </div>
                         {% endfor %}
                         {% else %}
-                        <p class="text-muted">No tienes proyectos recientes</p>
+                        <div class="text-center py-4">
+                            <i class="bi bi-folder-x display-3 text-muted"></i>
+                            <h5 class="text-muted mt-2">No tienes proyectos</h5>
+                            <p class="text-muted">Comienza creando tu primer proyecto</p>
+                            <a href="{% url 'crear_proyecto' %}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> Crear Proyecto
+                            </a>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="bi bi-handshake"></i> Colaboraciones Recientes</h5>
+                        <h5><i class="bi bi-handshake"></i> Colaboraciones Recibidas</h5>
                     </div>
                     <div class="card-body">
                         {% if colaboraciones_recibidas %}
                         {% for colaboracion in colaboraciones_recibidas %}
-                        <div class="mb-2">
-                            <strong>{{ colaboracion.responsable.nombre }}</strong>
-                            <br>
-                            <small class="text-muted">{{ colaboracion.detalle|truncatechars:50 }}</small>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="flex-grow-1">
+                                <strong>{{ colaboracion.responsable.nombre }}</strong>
+                                <br>
+                                <small class="text-muted">{{ colaboracion.detalle|truncatechars:50 }}</small>
+                            </div>
+                            <span class="badge {% if colaboracion.pedido.estado %}bg-success{% else %}bg-warning{% endif %}">
+                                {% if colaboracion.pedido.estado %}Completado{% else %}En progreso{% endif %}
+                            </span>
                         </div>
-                        <hr>
+                        {% if not forloop.last %}<hr>{% endif %}
                         {% endfor %}
                         {% else %}
                         <p class="text-muted">No hay colaboraciones recientes</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-clock"></i> Solicitudes Pendientes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if solicitudes_colaboracion %}
+                        {% for solicitud in solicitudes_colaboracion %}
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>{{ solicitud.pedido.tipo_cobertura.nombre }}</strong>
+                                <span class="badge bg-info">Pendiente</span>
+                            </div>
+                            <small class="text-muted">{{ solicitud.proyecto.nombre }}</small>
+                            <br>
+                            <small class="text-muted">Inicio: {{ solicitud.fecha_inicio }}</small>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                        {% endfor %}
+                        {% else %}
+                        <p class="text-muted">No hay solicitudes pendientes</p>
                         {% endif %}
                     </div>
                 </div>
@@ -254,24 +343,126 @@
             </div>
         </div>
 
+        <!-- Panel de Seguimiento de Participaciones para ONG Colaboradora -->
         <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="bi bi-check-circle"></i> Mis Participaciones en Proyectos</h5>
+                        <a href="{% url 'panel_seguimiento' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-clipboard-data"></i> Ver Panel Completo
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if proyectos_colaborando %}
+                        {% for item in proyectos_colaborando %}
+                        <div class="card mb-3 border-start border-5 {% if item.estado_participacion == 'Activa' %}border-warning{% else %}border-success{% endif %}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h6 class="mb-1">
+                                            <a href="{% url 'detalle_proyecto_seguimiento' item.proyecto.id %}" class="text-decoration-none">
+                                                {{ item.proyecto.nombre }}
+                                            </a>
+                                        </h6>
+                                        <small class="text-muted">Originador: {{ item.proyecto.originador.nombre }}</small>
+                                        <div class="mt-2">
+                                            <span class="badge {% if item.estado_participacion == 'Activa' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                                <i class="bi {% if item.estado_participacion == 'Activa' %}bi-clock{% else %}bi-check-circle{% endif %}"></i> 
+                                                {{ item.estado_participacion }}
+                                            </span>
+                                            {% if item.proyecto.estado == 'proceso' %}
+                                                <span class="badge bg-info">En proceso</span>
+                                            {% elif item.proyecto.estado == 'ejecucion' %}
+                                                <span class="badge bg-warning text-dark">En ejecución</span>
+                                            {% elif item.proyecto.estado == 'finalizado' %}
+                                                <span class="badge bg-success">Finalizado</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Mi progreso -->
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">Mis tareas</small>
+                                                <small class="fw-bold">{{ item.progreso_mis_tareas }}%</small>
+                                            </div>
+                                            <div class="progress mb-1" style="height: 6px;">
+                                                <div class="progress-bar bg-primary" role="progressbar" 
+                                                     style="width: {{ item.progreso_mis_tareas }}%" aria-valuenow="{{ item.progreso_mis_tareas }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ item.tareas_completadas }} de {{ item.tareas_total }} completadas</small>
+                                        </div>
+                                        
+                                        <!-- Progreso general del proyecto -->
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-muted">Progreso general</small>
+                                                <small class="fw-bold">{{ item.progreso_general }}%</small>
+                                            </div>
+                                            <div class="progress mb-1" style="height: 6px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                     style="width: {{ item.progreso_general }}%" aria-valuenow="{{ item.progreso_general }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Indicadores -->
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if item.compromisos_pendientes > 0 %}
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-clock"></i> {{ item.compromisos_pendientes }} pendientes
+                                            </span>
+                                            {% endif %}
+                                            {% if item.observaciones_count > 0 %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-eye"></i> {{ item.observaciones_count }} observaciones
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-handshake display-3 text-muted"></i>
+                            <h5 class="text-muted mt-2">No tienes participaciones activas</h5>
+                            <p class="text-muted">Explora oportunidades de colaboración</p>
+                            <a href="{% url 'mis_colaboraciones' %}" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Ver Oportunidades
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="bi bi-check-circle"></i> Mis Compromisos Activos</h5>
+                        <h5><i class="bi bi-list-check"></i> Compromisos Detallados</h5>
                     </div>
                     <div class="card-body">
-                        {% if mis_compromisos %}
-                        {% for compromiso in mis_compromisos %}
-                        <div class="card mb-2">
-                            <div class="card-body py-2">
-                                <h6 class="mb-1">{{ compromiso.tipo|title }} - {{ compromiso.detalle|truncatechars:50 }}</h6>
-                                <small class="text-muted">
-                                    Inicio: {{ compromiso.fecha_inicio }}
-                                    {% if compromiso.fecha_fin %} - Fin: {{ compromiso.fecha_fin }}{% endif %}
-                                </small>
+                        {% if compromisos_detallados %}
+                        {% for item in compromisos_detallados %}
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="flex-grow-1">
+                                <strong>{{ item.tipo_cobertura }}</strong>
+                                {% if item.proyecto %}
+                                <br><small class="text-muted">{{ item.proyecto.nombre }}</small>
+                                {% endif %}
+                                {% if item.etapa %}
+                                <br><small class="text-muted">Etapa: {{ item.etapa }}</small>
+                                {% endif %}
                             </div>
+                            <span class="badge {% if item.estado == 'Completado' %}bg-success{% else %}bg-warning{% endif %}">
+                                {{ item.estado }}
+                            </span>
                         </div>
+                        {% if not forloop.last %}<hr>{% endif %}
                         {% endfor %}
                         {% else %}
                         <p class="text-muted">No tienes compromisos activos</p>
@@ -287,13 +478,21 @@
                     <div class="card-body">
                         {% if pedidos_disponibles %}
                         {% for pedido in pedidos_disponibles %}
-                        <div class="card mb-2">
-                            <div class="card-body py-2">
-                                <h6 class="mb-1">{{ pedido.tipo_cobertura.nombre }}</h6>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="flex-grow-1">
+                                <strong>{{ pedido.tipo_cobertura.nombre }}</strong>
+                                <br>
                                 <small class="text-muted">Proyecto disponible para colaborar</small>
                             </div>
+                            <span class="badge bg-info">Disponible</span>
                         </div>
+                        {% if not forloop.last %}<hr>{% endif %}
                         {% endfor %}
+                        <div class="mt-3">
+                            <a href="{% url 'mis_colaboraciones' %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-arrow-right"></i> Ver todas las oportunidades
+                            </a>
+                        </div>
                         {% else %}
                         <p class="text-muted">No hay oportunidades de colaboración disponibles</p>
                         {% endif %}

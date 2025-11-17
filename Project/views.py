@@ -62,6 +62,7 @@ def crear_proyecto(request):
             user = User.objects.get(id=user_id)
 
             proyecto = proyecto_form.save(commit=False)
+            print("📝 Creando proyecto:", proyecto.nombre, " user ", user.ong, user)
             proyecto.originador = user.ong
             proyecto.estado = "Proceso"
             proyecto.save()

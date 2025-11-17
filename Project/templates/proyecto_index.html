@@ -1,85 +1,194 @@
 {% extends "base.html" %}
 
-{% block title %}Lista de Proyectos{% endblock %}
+{% block title %}Lista de Proyectos - DSSD{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Lista de Proyectos</h1>
-    <a href="{% url 'crear_proyecto' %}" class="btn btn-success">+ Crear Proyecto</a>
-  </div>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2">
+                <i class="bi bi-folder"></i> Proyectos
+                {% if user_role == 'gerencial' %}
+                    <span class="badge bg-danger ms-2">Gerencial</span>
+                {% elif user_role == 'ong_originante' %}
+                    <span class="badge bg-primary ms-2">ONG Originante</span>
+                {% elif user_role == 'ong_colaboradora' %}
+                    <span class="badge bg-success ms-2">ONG Colaboradora</span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">Gestión y seguimiento de proyectos colaborativos</p>
+        </div>
+        <div class="col-auto">
+            {% if user_permissions.can_create_projects %}
+            <a href="{% url 'crear_proyecto' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Crear Proyecto
+            </a>
+            {% endif %}
+        </div>
+    </div>
 
-  <table class="table table-hover table-bordered shadow-sm align-middle">
-    <thead class="table-dark">
-      <tr>
-        <th>Nombre</th>
-        <th>Descripción</th>
-        <th>Estado</th>
-        <th>Originador (ONG)</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for proyecto in proyectos %}
-      <tr>
-        <td class="fw-semibold">{{ proyecto.nombre }}</td>
-        <td>{{ proyecto.descripcion|truncatechars:100 }}</td>
-        <td>
-          {% if proyecto.estado == 'Proceso' %}
-            <span class="badge bg-primary">En proceso</span>
-          {% elif proyecto.estado == 'ejecucion' %}
-            <span class="badge bg-warning text-dark">En ejecución</span>
-          {% elif proyecto.estado == 'finalizado' %}
-            <span class="badge bg-success">Finalizado</span>
-          {% else %}
-            <span class="badge bg-secondary">Desconocido</span>
-          {% endif %}
-        </td>
-        <td>{{ proyecto.originador.nombre }}</td>
-        <td>
-          <div class="d-flex gap-2">
-            <a href="{% url 'etapas_proyecto' proyecto.id %}" class="btn btn-sm btn-outline-info">Ver</a>
-          </div>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="5" class="text-center py-4 text-muted">
-          No hay proyectos disponibles.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="card shadow">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-list-ul"></i> Proyectos</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if proyectos %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-semibold">Nombre</th>
+                            <th class="fw-semibold">Descripción</th>
+                            <th class="fw-semibold">Estado</th>
+                            <th class="fw-semibold">Originador</th>
+                            <th class="fw-semibold text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos %}
+                        <tr>
+                            <td class="fw-semibold text-primary">{{ proyecto.nombre }}</td>
+                            <td>
+                                <span class="text-muted">{{ proyecto.descripcion|truncatechars:80 }}</span>
+                            </td>
+                            <td>
+                                {% if proyecto.estado == 'proceso' %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-hourglass-split"></i> En proceso
+                                    </span>
+                                {% elif proyecto.estado == 'ejecucion' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-play-circle"></i> En ejecución
+                                    </span>
+                                {% elif proyecto.estado == 'finalizado' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Finalizado
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-question-circle"></i> {{ proyecto.estado|title }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-building me-2 text-muted"></i>
+                                    {{ proyecto.originador.nombre }}
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'etapas_proyecto' proyecto.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </a>
+                                    {% if user_permissions.can_edit_projects %}
+                                    <a href="#" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-folder-x display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">No hay proyectos disponibles</h4>
+                <p class="text-muted mb-4">Aún no se han creado proyectos en el sistema</p>
+                {% if user_permissions.can_create_projects %}
+                <a href="{% url 'crear_proyecto' %}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Crear Primer Proyecto
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
-  {% if proyectos.paginator.num_pages > 1 %}
-  <nav aria-label="Paginación proyectos" class="mt-4">
-    <ul class="pagination justify-content-center">
-      {% if proyectos.has_previous %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ proyectos.previous_page_number }}">Anterior</a>
-        </li>
-      {% else %}
-        <li class="page-item disabled"><span class="page-link">Anterior</span></li>
-      {% endif %}
+    <!-- Paginación -->
+    {% if proyectos.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Paginación proyectos">
+            <ul class="pagination">
+                {% if proyectos.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ proyectos.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i> Anterior
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            <i class="bi bi-chevron-left"></i> Anterior
+                        </span>
+                    </li>
+                {% endif %}
 
-      {% for num in proyectos.paginator.page_range %}
-        {% if proyectos.number == num %}
-          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-        {% else %}
-          <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-        {% endif %}
-      {% endfor %}
+                {% for num in proyectos.paginator.page_range %}
+                    {% if proyectos.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
 
-      {% if proyectos.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="?page={{ proyectos.next_page_number }}">Siguiente</a>
-        </li>
-      {% else %}
-        <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
-      {% endif %}
-    </ul>
-  </nav>
-  {% endif %}
+                {% if proyectos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ proyectos.next_page_number }}">
+                            Siguiente <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Siguiente <i class="bi bi-chevron-right"></i>
+                        </span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Acciones Rápidas -->
+    <div class="row mt-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if user_permissions.can_create_projects %}
+                        <a href="{% url 'crear_proyecto' %}" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Crear Nuevo Proyecto
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-speedometer2"></i> Volver al Dashboard
+                        </a>
+                        
+                        {% if user_permissions.can_view_reports %}
+                        <a href="#" class="btn btn-outline-info">
+                            <i class="bi bi-graph-up"></i> Reportes de Proyectos
+                        </a>
+                        {% endif %}
+                        
+                        <a href="#" class="btn btn-outline-secondary">
+                            <i class="bi bi-funnel"></i> Filtrar Proyectos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

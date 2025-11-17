@@ -79,7 +79,11 @@ def _get_ong_originante_dashboard_data(usuario):
     
     ong = usuario.ong
     
-    # Proyectos de mi ONG
+    # Proyectos de mi ONG con información detallada
+    from Stage.models import Etapa
+    from Commitment.models import Compromiso
+    from Observation.models import Observacion
+    
     mis_proyectos = Proyecto.objects.filter(originador=ong)
     
     # Estadísticas de mis proyectos
@@ -90,20 +94,56 @@ def _get_ong_originante_dashboard_data(usuario):
         'finalizados': mis_proyectos.filter(estado='finalizado').count(),
     }
     
-    # Proyectos recientes de mi ONG
-    proyectos_recientes = mis_proyectos.order_by('-id')[:5]
+    # Proyectos recientes con información completa
+    proyectos_detallados = []
+    for proyecto in mis_proyectos.order_by('-id')[:10]:
+        # Calcular progreso del proyecto
+        etapas_total = proyecto.etapas.count()
+        etapas_completadas = proyecto.etapas.filter(pedido__estado=True).count()
+        progreso_porcentaje = (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0
+        
+        # Solicitudes de colaboración pendientes
+        solicitudes_pendientes = proyecto.etapas.filter(
+            pedido__estado=False,
+            pedido__compromisos__isnull=True
+        ).count()
+        
+        # Colaboraciones activas
+        colaboraciones_activas = Compromiso.objects.filter(
+            pedido__etapas__proyecto=proyecto
+        ).count()
+        
+        # Observaciones del proyecto
+        observaciones_count = proyecto.observaciones.count()
+        
+        proyectos_detallados.append({
+            'proyecto': proyecto,
+            'etapas_total': etapas_total,
+            'etapas_completadas': etapas_completadas,
+            'progreso_porcentaje': round(progreso_porcentaje, 1),
+            'solicitudes_pendientes': solicitudes_pendientes,
+            'colaboraciones_activas': colaboraciones_activas,
+            'observaciones_count': observaciones_count,
+        })
     
     # Colaboraciones recibidas (compromisos en mis proyectos)
-    from Commitment.models import Compromiso
-    colaboraciones = Compromiso.objects.filter(
+    colaboraciones_recibidas = Compromiso.objects.filter(
         pedido__etapas__proyecto__originador=ong
-    ).distinct()[:5]
+    ).distinct().select_related('responsable', 'pedido')[:5]
+    
+    # Solicitudes de colaboración pendientes
+    solicitudes_colaboracion = Etapa.objects.filter(
+        proyecto__originador=ong,
+        pedido__estado=False,
+        pedido__compromisos__isnull=True
+    ).select_related('proyecto', 'pedido__tipo_cobertura')[:5]
     
     return {
         'dashboard_type': 'ong_originante',
         'mis_stats': mis_stats,
-        'proyectos_recientes': proyectos_recientes,
-        'colaboraciones_recibidas': colaboraciones,
+        'proyectos_detallados': proyectos_detallados,
+        'colaboraciones_recibidas': colaboraciones_recibidas,
+        'solicitudes_colaboracion': solicitudes_colaboracion,
         'ong': ong,
     }
 
@@ -112,8 +152,11 @@ def _get_ong_colaboradora_dashboard_data(usuario):
     
     ong = usuario.ong
     
-    # Compromisos de mi ONG
+    # Compromisos de mi ONG con información detallada
     from Commitment.models import Compromiso
+    from Stage.models import Etapa
+    from Observation.models import Observacion
+    
     mis_compromisos = Compromiso.objects.filter(responsable=ong)
     
     # Estadísticas de compromisos
@@ -123,23 +166,70 @@ def _get_ong_colaboradora_dashboard_data(usuario):
         'completados': mis_compromisos.filter(pedido__estado=True).count(),
     }
     
-    # Proyectos en los que participamos
+    # Proyectos en los que participamos con detalles de progreso
+    proyectos_colaborando = []
     proyectos_participando = Proyecto.objects.filter(
         etapas__pedido__compromisos__responsable=ong
     ).distinct()
+    
+    for proyecto in proyectos_participando[:10]:
+        # Mis tareas en este proyecto
+        mis_tareas = mis_compromisos.filter(
+            pedido__etapas__proyecto=proyecto
+        )
+        
+        tareas_total = mis_tareas.count()
+        tareas_completadas = mis_tareas.filter(pedido__estado=True).count()
+        progreso_mis_tareas = (tareas_completadas / tareas_total * 100) if tareas_total > 0 else 0
+        
+        # Progreso general del proyecto
+        etapas_total = proyecto.etapas.count()
+        etapas_completadas = proyecto.etapas.filter(pedido__estado=True).count()
+        progreso_general = (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0
+        
+        # Observaciones del proyecto
+        observaciones_count = proyecto.observaciones.count()
+        
+        # Estado de mis compromisos específicos
+        compromisos_pendientes = mis_tareas.filter(pedido__estado=False).count()
+        
+        proyectos_colaborando.append({
+            'proyecto': proyecto,
+            'tareas_total': tareas_total,
+            'tareas_completadas': tareas_completadas,
+            'progreso_mis_tareas': round(progreso_mis_tareas, 1),
+            'progreso_general': round(progreso_general, 1),
+            'observaciones_count': observaciones_count,
+            'compromisos_pendientes': compromisos_pendientes,
+            'estado_participacion': 'Activa' if compromisos_pendientes > 0 else 'Completada'
+        })
+    
+    # Compromisos detallados con estado
+    compromisos_detallados = []
+    for compromiso in mis_compromisos.select_related('pedido__tipo_cobertura')[:10]:
+        etapa = compromiso.pedido.etapas.first()
+        proyecto = etapa.proyecto if etapa else None
+        
+        compromisos_detallados.append({
+            'compromiso': compromiso,
+            'proyecto': proyecto,
+            'etapa': etapa,
+            'estado': 'Completado' if compromiso.pedido.estado else 'Pendiente',
+            'tipo_cobertura': compromiso.pedido.tipo_cobertura.nombre,
+        })
     
     # Pedidos de colaboración disponibles
     from CoverageRequest.models import PedidoCobertura
     pedidos_disponibles = PedidoCobertura.objects.filter(
         estado=False,
         compromisos__isnull=True
-    )[:5]
+    ).select_related('tipo_cobertura')[:5]
     
     return {
         'dashboard_type': 'ong_colaboradora',
         'compromisos_stats': compromisos_stats,
-        'mis_compromisos': mis_compromisos[:5],
-        'proyectos_participando': proyectos_participando[:5],
+        'proyectos_colaborando': proyectos_colaborando,
+        'compromisos_detallados': compromisos_detallados,
         'pedidos_disponibles': pedidos_disponibles,
         'ong': ong,
     }
@@ -292,6 +382,209 @@ def dashboard_gerencial(request):
     })
     
     return render(request, 'dashboard_gerencial.html', context)
+
+@session_required
+def panel_seguimiento(request):
+    """Panel de seguimiento completo para organizaciones"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    usuario = user_context['usuario']
+    role = user_context['user_role']
+    
+    # Solo ONGs pueden acceder al panel de seguimiento
+    if not usuario.ong or role == 'gerencial':
+        return redirect('dashboard')
+    
+    from Stage.models import Etapa
+    from Commitment.models import Compromiso
+    from Observation.models import Observacion
+    
+    ong = usuario.ong
+    context = user_context.copy()
+    
+    if role == 'ong_originante':
+        # Panel para ONG originante - seguimiento de sus proyectos
+        mis_proyectos = Proyecto.objects.filter(originador=ong)
+        
+        proyectos_seguimiento = []
+        for proyecto in mis_proyectos:
+            # Detalles completos del proyecto
+            etapas = proyecto.etapas.all()
+            etapas_total = etapas.count()
+            etapas_completadas = etapas.filter(pedido__estado=True).count()
+            
+            # Colaboradores por etapa
+            colaboradores = {}
+            solicitudes_pendientes = []
+            
+            for etapa in etapas:
+                if etapa.pedido:
+                    compromisos = etapa.pedido.compromisos.all()
+                    if compromisos.exists():
+                        colaboradores[etapa.nombre] = [c.responsable for c in compromisos]
+                    else:
+                        solicitudes_pendientes.append({
+                            'etapa': etapa.nombre,
+                            'tipo_cobertura': etapa.pedido.tipo_cobertura.nombre,
+                            'fecha_inicio': etapa.fecha_inicio,
+                        })
+            
+            # Observaciones del proyecto
+            observaciones = proyecto.observaciones.all()
+            
+            proyectos_seguimiento.append({
+                'proyecto': proyecto,
+                'etapas_total': etapas_total,
+                'etapas_completadas': etapas_completadas,
+                'progreso_porcentaje': (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0,
+                'colaboradores': colaboradores,
+                'solicitudes_pendientes': solicitudes_pendientes,
+                'observaciones': observaciones,
+                'observaciones_count': observaciones.count(),
+            })
+        
+        context.update({
+            'panel_tipo': 'originante',
+            'proyectos_seguimiento': proyectos_seguimiento,
+        })
+        
+    elif role == 'ong_colaboradora':
+        # Panel para ONG colaboradora - seguimiento de participaciones
+        mis_compromisos = Compromiso.objects.filter(responsable=ong)
+        
+        participaciones_seguimiento = []
+        proyectos_participando = Proyecto.objects.filter(
+            etapas__pedido__compromisos__responsable=ong
+        ).distinct()
+        
+        for proyecto in proyectos_participando:
+            # Mis compromisos en este proyecto
+            compromisos_proyecto = mis_compromisos.filter(
+                pedido__etapas__proyecto=proyecto
+            )
+            
+            tareas_total = compromisos_proyecto.count()
+            tareas_completadas = compromisos_proyecto.filter(pedido__estado=True).count()
+            
+            # Estado detallado de cada compromiso
+            compromisos_detalle = []
+            for compromiso in compromisos_proyecto:
+                etapa = compromiso.pedido.etapas.first()
+                compromisos_detalle.append({
+                    'compromiso': compromiso,
+                    'etapa': etapa.nombre if etapa else 'Sin etapa',
+                    'tipo_cobertura': compromiso.pedido.tipo_cobertura.nombre,
+                    'estado': 'Completado' if compromiso.pedido.estado else 'Pendiente',
+                    'fecha_inicio': compromiso.fecha_inicio,
+                    'fecha_fin': compromiso.fecha_fin,
+                })
+            
+            # Progreso general del proyecto
+            etapas_total_proyecto = proyecto.etapas.count()
+            etapas_completadas_proyecto = proyecto.etapas.filter(pedido__estado=True).count()
+            
+            # Observaciones del proyecto
+            observaciones = proyecto.observaciones.all()
+            
+            participaciones_seguimiento.append({
+                'proyecto': proyecto,
+                'originador': proyecto.originador,
+                'mis_tareas_total': tareas_total,
+                'mis_tareas_completadas': tareas_completadas,
+                'mi_progreso': (tareas_completadas / tareas_total * 100) if tareas_total > 0 else 0,
+                'progreso_general': (etapas_completadas_proyecto / etapas_total_proyecto * 100) if etapas_total_proyecto > 0 else 0,
+                'compromisos_detalle': compromisos_detalle,
+                'observaciones': observaciones,
+                'observaciones_count': observaciones.count(),
+                'estado_participacion': 'Activa' if tareas_total > tareas_completadas else 'Completada'
+            })
+        
+        context.update({
+            'panel_tipo': 'colaboradora',
+            'participaciones_seguimiento': participaciones_seguimiento,
+        })
+    
+    return render(request, 'panel_seguimiento.html', context)
+
+@session_required
+def detalle_proyecto_seguimiento(request, proyecto_id):
+    """Vista detallada de seguimiento para un proyecto específico"""
+    user_context = get_user_context(request)
+    if not user_context:
+        return redirect("login")
+    
+    usuario = user_context['usuario']
+    role = user_context['user_role']
+    
+    try:
+        proyecto = Proyecto.objects.get(id=proyecto_id)
+    except Proyecto.DoesNotExist:
+        return redirect('panel_seguimiento')
+    
+    # Verificar permisos
+    if role == 'ong_originante' and proyecto.originador != usuario.ong:
+        return redirect('panel_seguimiento')
+    elif role == 'ong_colaboradora':
+        # Verificar que tenga compromisos en el proyecto
+        from Commitment.models import Compromiso
+        if not Compromiso.objects.filter(
+            responsable=usuario.ong,
+            pedido__etapas__proyecto=proyecto
+        ).exists():
+            return redirect('panel_seguimiento')
+    
+    # Obtener información detallada del proyecto
+    from Stage.models import Etapa
+    from Commitment.models import Compromiso
+    from Observation.models import Observacion
+    
+    etapas = proyecto.etapas.all().order_by('fecha_inicio')
+    
+    etapas_detalle = []
+    for etapa in etapas:
+        etapa_info = {
+            'etapa': etapa,
+            'compromisos': [],
+            'estado': 'Sin solicitar'
+        }
+        
+        if etapa.pedido:
+            compromisos = etapa.pedido.compromisos.all()
+            etapa_info['estado'] = 'Completado' if etapa.pedido.estado else ('Con colaborador' if compromisos.exists() else 'Solicitando colaboración')
+            etapa_info['tipo_cobertura'] = etapa.pedido.tipo_cobertura.nombre
+            
+            for compromiso in compromisos:
+                etapa_info['compromisos'].append({
+                    'compromiso': compromiso,
+                    'responsable': compromiso.responsable,
+                    'tipo': compromiso.get_tipo_display(),
+                    'estado': 'Completado' if compromiso.pedido.estado else 'En progreso'
+                })
+        
+        etapas_detalle.append(etapa_info)
+    
+    # Observaciones del proyecto
+    observaciones = proyecto.observaciones.all().order_by('-id')
+    
+    # Estadísticas
+    etapas_total = etapas.count()
+    etapas_completadas = etapas.filter(pedido__estado=True).count()
+    progreso_porcentaje = (etapas_completadas / etapas_total * 100) if etapas_total > 0 else 0
+    
+    context = user_context.copy()
+    context.update({
+        'proyecto': proyecto,
+        'etapas_detalle': etapas_detalle,
+        'observaciones': observaciones,
+        'etapas_total': etapas_total,
+        'etapas_completadas': etapas_completadas,
+        'progreso_porcentaje': round(progreso_porcentaje, 1),
+        'puede_editar': role == 'ong_originante' and proyecto.originador == usuario.ong,
+    })
+    
+    return render(request, 'detalle_proyecto_seguimiento.html', context)
 
 @session_required
 def reportes(request):

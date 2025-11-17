@@ -135,6 +135,15 @@ def get_navigation_menu(user):
             'active': False
         })
     
+    # Panel de seguimiento para ONGs
+    if role in ['ong_originante', 'ong_colaboradora']:
+        safe_add_menu_item(menu_items, {
+            'label': 'Panel de Seguimiento',
+            'url': 'panel_seguimiento',
+            'icon': 'bi-clipboard-data',
+            'active': False
+        })
+    
     if permissions['can_view_observations']:
         safe_add_menu_item(menu_items, {
             'label': 'Observaciones',

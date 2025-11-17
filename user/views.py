@@ -15,13 +15,13 @@ url_bonita = "http://localhost:8080/bonita"
 def bonita_login(request, bonita_username, bonita_password):
     url = f"{url_bonita}/loginservice"
 
+    # bonita_username = 'walter.bates'  # hardcoded for testing
+    # bonita_password = 'admin'         # hardcoded for testing
     payload = {
         "username": bonita_username,
         "password": bonita_password,
         "redirect": "false",
     }
-
-    print(f"Intentando login en Bonita con usuario: {bonita_username} password: {bonita_password}")
 
     session = requests.Session()
     response = session.post(url, data=payload)
@@ -37,7 +37,6 @@ def bonita_login(request, bonita_username, bonita_password):
     else:
         raise Exception("Error al loguearse en Bonita", response.text, response.status_code, response)
 
-# Login de Django
 def login_view(request):
     if request.method == "POST":
         form = LoginForm(request.POST)

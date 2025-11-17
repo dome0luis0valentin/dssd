@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}{{ proyecto.nombre }} - Seguimiento Detallado - DSSD{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'panel_seguimiento' %}">Panel de Seguimiento</a></li>
+                    <li class="breadcrumb-item active">{{ proyecto.nombre }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="h2">
+                <i class="bi bi-clipboard-data"></i> {{ proyecto.nombre }}
+                {% if proyecto.estado == 'proceso' %}
+                    <span class="badge bg-info ms-2">En proceso</span>
+                {% elif proyecto.estado == 'ejecucion' %}
+                    <span class="badge bg-warning text-dark ms-2">En ejecución</span>
+                {% elif proyecto.estado == 'finalizado' %}
+                    <span class="badge bg-success ms-2">Finalizado</span>
+                {% endif %}
+            </h1>
+            <p class="text-muted">{{ proyecto.descripcion }}</p>
+        </div>
+        <div class="col-auto">
+            {% if puede_editar %}
+            <a href="#" class="btn btn-outline-primary me-2">
+                <i class="bi bi-pencil"></i> Editar Proyecto
+            </a>
+            {% endif %}
+            <a href="{% url 'panel_seguimiento' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver al Panel
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen del proyecto -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-header">
+                    <i class="bi bi-list-ol"></i> Etapas Totales
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ etapas_total }}</h2>
+                    <p class="card-text">Etapas del proyecto</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-header">
+                    <i class="bi bi-check-circle"></i> Completadas
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ etapas_completadas }}</h2>
+                    <p class="card-text">Etapas finalizadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-header">
+                    <i class="bi bi-graph-up"></i> Progreso
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ progreso_porcentaje }}%</h2>
+                    <p class="card-text">Avance general</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-header">
+                    <i class="bi bi-eye"></i> Observaciones
+                </div>
+                <div class="card-body">
+                    <h2 class="card-title">{{ observaciones|length }}</h2>
+                    <p class="card-text">Total de observaciones</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progreso visual -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-graph-up"></i> Progreso del Proyecto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar {% if progreso_porcentaje == 100 %}bg-success{% elif progreso_porcentaje > 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                             role="progressbar" style="width: {{ progreso_porcentaje }}%">
+                            <strong>{{ progreso_porcentaje }}%</strong>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Inicio</span>
+                        <span class="fw-bold">{{ etapas_completadas }} de {{ etapas_total }} etapas completadas</span>
+                        <span class="text-muted">Finalización</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle de etapas -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-list-task"></i> Detalle de Etapas</h5>
+                </div>
+                <div class="card-body">
+                    {% if etapas_detalle %}
+                    {% for etapa_info in etapas_detalle %}
+                    <div class="card mb-3 
+                        {% if etapa_info.estado == 'Completado' %}border-success
+                        {% elif etapa_info.estado == 'Con colaborador' %}border-warning
+                        {% elif etapa_info.estado == 'Solicitando colaboración' %}border-info
+                        {% else %}border-secondary
+                        {% endif %}">
+                        <div class="card-header">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <h6 class="mb-0">{{ etapa_info.etapa.nombre }}</h6>
+                                    <small class="text-muted">
+                                        Inicio: {{ etapa_info.etapa.fecha_inicio }}
+                                        {% if etapa_info.etapa.fecha_fin %} - Fin: {{ etapa_info.etapa.fecha_fin }}{% endif %}
+                                    </small>
+                                </div>
+                                <div class="col-auto">
+                                    {% if etapa_info.estado == 'Completado' %}
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> Completado
+                                        </span>
+                                    {% elif etapa_info.estado == 'Con colaborador' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-clock"></i> En progreso
+                                        </span>
+                                    {% elif etapa_info.estado == 'Solicitando colaboración' %}
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-search"></i> Solicitando colaboración
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-question-circle"></i> Sin solicitar
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="mb-2">{{ etapa_info.etapa.descripcion|default:"Sin descripción disponible" }}</p>
+                                    
+                                    {% if etapa_info.tipo_cobertura %}
+                                    <p class="mb-2">
+                                        <strong>Tipo de cobertura solicitada:</strong> 
+                                        <span class="badge bg-primary">{{ etapa_info.tipo_cobertura }}</span>
+                                    </p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    {% if etapa_info.compromisos %}
+                                    <h6 class="text-success">
+                                        <i class="bi bi-people"></i> Colaboradores
+                                    </h6>
+                                    {% for compromiso_info in etapa_info.compromisos %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <strong>{{ compromiso_info.responsable.nombre }}</strong>
+                                            <br>
+                                            <small class="text-muted">{{ compromiso_info.tipo }} - {{ compromiso_info.compromiso.detalle|truncatechars:30 }}</small>
+                                        </div>
+                                        <span class="badge {% if compromiso_info.estado == 'Completado' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ compromiso_info.estado }}
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="text-muted">
+                                        <i class="bi bi-person-x"></i> Sin colaboradores asignados
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-list-task display-3 text-muted"></i>
+                        <h5 class="text-muted mt-2">No hay etapas definidas</h5>
+                        <p class="text-muted">Este proyecto no tiene etapas configuradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Observaciones -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-eye"></i> Observaciones del Proyecto</h5>
+                </div>
+                <div class="card-body">
+                    {% if observaciones %}
+                    {% for observacion in observaciones %}
+                    <div class="alert alert-warning" role="alert">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="alert-heading">Observación del Consejo Directivo</h6>
+                                <p class="mb-1">{{ observacion.descripcion }}</p>
+                                <small class="text-muted">Consejo: {{ observacion.consejo.nombre|default:"Consejo Directivo" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i> No hay observaciones para este proyecto.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if puede_editar %}
+                        <a href="#" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Editar Proyecto
+                        </a>
+                        <a href="#" class="btn btn-success">
+                            <i class="bi bi-plus-circle"></i> Añadir Etapa
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'panel_seguimiento' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-clipboard-data"></i> Volver al Panel
+                        </a>
+                        
+                        <a href="{% url 'proyecto' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-folder"></i> Ver Todos los Proyectos
+                        </a>
+                        
+                        {% if user_role == 'ong_originante' %}
+                        <a href="{% url 'observaciones' %}" class="btn btn-outline-warning">
+                            <i class="bi bi-eye"></i> Ver Observaciones
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
