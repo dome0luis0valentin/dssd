@@ -4,10 +4,46 @@
 
 {% block content %}
 <div class="container mt-4">
+
     <h3>
         <i class="bi bi-journal-text"></i> Compromisos de la etapa: {{ etapa.nombre }}
     </h3>
     <p class="text-muted">{{ etapa.descripcion }}</p>
+
+    <!-- 🔹 Información del Pedido de Cobertura -->
+    {% if pedido %}
+    <div class="alert alert-primary mt-3">
+        <strong>Pedido de Cobertura:</strong> {{ pedido.tipo_cobertura.nombre }} <br>
+        <strong>Estado:</strong>
+        {% if pedido.estado %}
+            <span class="text-success fw-bold">✔️ Completo</span>
+        {% else %}
+            <span class="text-danger fw-bold">❌ Incompleto</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- 🔹 Calendario visual si la cobertura NO es total -->
+    {% if calendario %}
+    <div class="mb-4">
+        <strong>Calendario de cobertura:</strong>
+        <div class="d-flex flex-wrap mt-2" style="gap:6px;">
+            {% for dia in calendario %}
+                <span class="badge {% if dia.cubierto %}bg-danger{% else %}bg-success{% endif %}">
+                    {{ dia.fecha }}
+                </span>
+            {% endfor %}
+        </div>
+        <small class="text-muted">
+            <span class="badge bg-success">🟩</span> Falta cubrir — 
+            <span class="badge bg-danger">🟥</span> Cubierto por compromisos
+        </small>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        Esta etapa ya está totalmente cubierta por un compromiso TOTAL.
+    </div>
+    {% endif %}
 
     <a href="{{ request.META.HTTP_REFERER }}" class="btn btn-outline-secondary mb-3">
         <i class="bi bi-arrow-left"></i> Volver
