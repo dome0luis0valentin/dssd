@@ -7,31 +7,52 @@ from user.models import User
 from Stage.models import Etapa
 from datetime import timedelta
 from notifications.views import crear_notificacion
+from ONG.models import ONG   
 
 @session_required
 def postular_compromiso(request, pedido_id):
     pedido = get_object_or_404(PedidoCobertura, id=pedido_id)
-    etapa = pedido.etapas.first()  # suponiendo que cada etapa tiene un solo pedido
-    # Recuperamos el usuario logueado desde la sesión
+    etapa = pedido.etapas.first()  # una etapa por pedido
     user_id = request.session.get("user_id")
     user = get_object_or_404(User, id=user_id)
-    ong = getattr(user, 'ong', None)  # ONG asociada al usuario
+    ong_postulante = getattr(user, 'ong', None)
 
     if request.method == 'POST':
         form = CompromisoForm(request.POST, pedido=pedido)
         if form.is_valid():
             compromiso = form.save(commit=False)
             compromiso.pedido = pedido
-            compromiso.responsable = ong  # asignación automática
+            compromiso.responsable = ong_postulante  # ONG que se postula
+
+            # Si es compromiso total, completamos fechas automáticamente
             if compromiso.tipo == 'total' and etapa:
                 compromiso.fecha_inicio = etapa.fecha_inicio
                 compromiso.fecha_fin = etapa.fecha_fin
+
             compromiso.save()
+
+            # 🔥 Notificar a todos los usuarios de la ONG propietaria del proyecto
+            ong_origen = etapa.proyecto.originador  # ONG propietaria del proyecto
+            usuarios_notificar = User.objects.filter(ong=ong_origen)
+
+            for u in usuarios_notificar:
+                crear_notificacion(
+                    u,
+                    f"El Usuario {user.nombre} {user.apellido}, que pertenece a la ONG {ong_postulante.nombre}, "
+                    f"postuló a la Etapa '{etapa.nombre}' del Proyecto '{etapa.proyecto.nombre}'.",
+                    tipo='info'
+                )
+
             return redirect('etapas_proyecto', proyecto_id=etapa.proyecto.id)
+
     else:
         form = CompromisoForm(pedido=pedido)
 
-    return render(request, 'postular_compromiso.html', {'form': form, 'pedido': pedido, 'etapa': etapa})
+    return render(request, 'postular_compromiso.html', {
+        'form': form,
+        'pedido': pedido,
+        'etapa': etapa
+    })
 
 
 @session_required
