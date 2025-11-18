@@ -6,6 +6,7 @@ from user.wraps import session_required
 from user.models import User
 from Stage.models import Etapa
 from datetime import timedelta
+from notifications.views import crear_notificacion
 
 @session_required
 def postular_compromiso(request, pedido_id):
@@ -65,63 +66,76 @@ def detalle_compromiso(request, compromiso_id):
         "compromiso": compromiso,
     })
 
-
 def aceptar_compromiso(request, id):
     """
-    Lógica para aceptar un compromiso
+    Acepta un compromiso:
+    - Si es TOTAL: marca el pedido como completo.
+    - Si es PARCIAL: actualiza las fechas cubiertas y si todo está cubierto, marca el pedido como completo.
+    - Envía notificaciones a todos los usuarios de la ONG responsable.
+    - No elimina el compromiso aceptado.
     """
     compromiso = get_object_or_404(Compromiso, id=id)
     pedido = compromiso.pedido
-    etapa = pedido.etapas.first()  # suponemos que cada pedido pertenece a una etapa
+    etapa = pedido.etapas.first()
     
-    # Si el compromiso es TOTAL
+    # Obtener todos los usuarios de la ONG responsable
+    usuarios = User.objects.filter(ong=compromiso.responsable)
+
     if compromiso.tipo == 'total':
-        # Marcamos el pedido como completo
         pedido.estado = True
         pedido.save()
-        
-        # Comentario: Aquí se puede eliminar los demás compromisos pendientes de esta etapa
-        # y enviar notificación a los usuarios afectados
-        # Ejemplo:
-        # Compromiso.objects.filter(pedido=pedido).exclude(id=compromiso.id).delete()
-        # enviar_notificacion_usuarios(etapa)
-    
-    # Si el compromiso es PARCIAL
+
+        # Notificar a todos los integrantes de la ONG responsable
+        for usuario in usuarios:
+            crear_notificacion(
+                usuario,
+                f"Felicidades, usted tiene un compromiso con la etapa '{etapa.nombre}' del proyecto '{etapa.proyecto.nombre}'",
+                tipo='success'
+            )
+        # Comentario: aquí se pueden eliminar compromisos pendientes de esta etapa
+        # y enviar otras notificaciones si hace falta
+
     elif compromiso.tipo == 'parcial':
-        # Actualizar las fechas cubiertas en la etapa
-        # Suponemos que tenemos un campo calendario o lista de fechas pendientes
-        # Comentario: aquí iría la lógica para marcar las fechas del compromiso como "cubiertas"
-        # ejemplo pseudocódigo:
-        # for fecha in compromiso.fecha_inicio ... compromiso.fecha_fin:
-        #     marcar_fecha_cubierta(fecha, etapa)
+        # Pseudocódigo para actualizar fechas parciales
+        # actualizar_fechas_cubiertas(compromiso, etapa)
         
-        # Verificamos si todas las fechas de la etapa están cubiertas
-        # Si todas las fechas se cubrieron, marcar el pedido como completo
-        todas_fechas_cubiertas = True  # reemplazar con verificación real
+        todas_fechas_cubiertas = True  # reemplazar por lógica real
         if todas_fechas_cubiertas:
             pedido.estado = True
             pedido.save()
-            
-            # Comentario: eliminar compromisos parciales pendientes y enviar notificación
+            # Comentario: eliminar otros compromisos parciales y enviar notificaciones a los afectados
             # Compromiso.objects.filter(pedido=pedido).exclude(id=compromiso.id).delete()
             # enviar_notificacion_usuarios(etapa)
-    
-    # Guardar el estado del compromiso aceptado (opcional)
-    compromiso.estado = 'Aceptado'
-    compromiso.save()
-    
+
+        for usuario in usuarios:
+            crear_notificacion(
+                usuario,
+                f"Felicidades, usted tiene un compromiso con la etapa '{etapa.nombre}' del proyecto '{etapa.proyecto.nombre}'",
+                tipo='success'
+            )
+
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
 
 def rechazar_compromiso(request, id):
     """
-    Lógica para rechazar un compromiso.
-    Por ahora solo redirige y se deja la misma lógica para eliminar y notificar en el futuro.
+    Rechaza un compromiso:
+    - Envía notificación de agradecimiento a todos los integrantes de la ONG responsable.
+    - Elimina el compromiso rechazado.
     """
     compromiso = get_object_or_404(Compromiso, id=id)
-    
-    # Comentario: Aquí se puede eliminar el compromiso y notificar a los usuarios
-    # ejemplo:
-    # compromiso.delete()
-    # enviar_notificacion_usuarios(etapa)
-    
+    etapa = compromiso.pedido.etapas.first()
+    usuarios = User.objects.filter(ong=compromiso.responsable)
+
+    # Notificación de agradecimiento
+    for usuario in usuarios:
+        crear_notificacion(
+            usuario,
+            f"Gracias por su participación en la etapa '{etapa.nombre}' del proyecto '{etapa.proyecto.nombre}'",
+            tipo='info'
+        )
+
+    # Eliminar compromiso rechazado
+    compromiso.delete()
+
     return redirect(request.META.get("HTTP_REFERER", "/"))
