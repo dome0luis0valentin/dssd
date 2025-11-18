@@ -29,14 +29,15 @@
         <strong>Calendario de cobertura:</strong>
         <div class="d-flex flex-wrap mt-2" style="gap:6px;">
             {% for dia in calendario %}
-                <span class="badge {% if dia.cubierto %}bg-danger{% else %}bg-success{% endif %}">
+                <!-- Cambios solicitados: verde = cubierto, rojo = falta cubrir -->
+                <span class="badge {% if dia.cubierto %}bg-success{% else %}bg-danger{% endif %}">
                     {{ dia.fecha }}
                 </span>
             {% endfor %}
         </div>
         <small class="text-muted">
-            <span class="badge bg-success">🟩</span> Falta cubrir — 
-            <span class="badge bg-danger">🟥</span> Cubierto por compromisos
+            <span class="badge bg-danger">🟥</span> Falta cubrir — 
+            <span class="badge bg-success">🟩</span> Cubierto por compromisos
         </small>
     </div>
     {% else %}
@@ -74,15 +75,20 @@
                         <i class="bi bi-eye"></i> Ver más
                     </a>
 
-                    <!-- Aceptar -->
-                    <a href="{% url 'aceptar_compromiso' compromiso.id %}" class="btn btn-sm btn-success">
-                        <i class="bi bi-check2-circle"></i> Aceptar
-                    </a>
+                    {% if not pedido.estado %}
+                        <!-- Aceptar -->
+                        <a href="{% url 'aceptar_compromiso' compromiso.id %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-check2-circle"></i> Aceptar
+                        </a>
 
-                    <!-- Rechazar -->
-                    <a href="{% url 'rechazar_compromiso' compromiso.id %}" class="btn btn-sm btn-danger">
-                        <i class="bi bi-x-circle"></i> Rechazar
-                    </a>
+                        <!-- Rechazar -->
+                        <a href="{% url 'rechazar_compromiso' compromiso.id %}" class="btn btn-sm btn-danger">
+                            <i class="bi bi-x-circle"></i> Rechazar
+                        </a>
+                    {% else %}
+                        <!-- Pedido completado → ocultamos botones -->
+                        <span class="badge bg-secondary">Compromiso confirmado</span>
+                    {% endif %}
                 </div>
 
             </li>

@@ -64,17 +64,23 @@
     </div>
 
     <!-- Acciones rápidas -->
-    {% if estadisticas.no_leidas > 0 %}
     <div class="row mb-3">
         <div class="col">
             <div class="d-flex gap-2">
-                <button onclick="marcarTodasLeidas()" class="btn btn-success" id="btnMarcarTodas">
+
+                {% if estadisticas.no_leidas > 0 %}
+                <button onclick="marcarTodasLeidas()" class="btn btn-success">
                     <i class="bi bi-check-all"></i> Marcar todas como leídas ({{ estadisticas.no_leidas }})
                 </button>
+                {% endif %}
+
+                <button onclick="borrarTodasNotificaciones()" class="btn btn-danger">
+                    <i class="bi bi-x-circle"></i> Borrar todas las notificaciones
+                </button>
+
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- Lista de notificaciones -->
     <div class="row">
@@ -171,13 +177,19 @@
                                     </div>
                                     <span class="badge bg-success">Leída</span>
                                 </div>
-                                {% if notificacion.url %}
-                                <div class="mt-2">
+                                <div class="mt-2 d-flex gap-2">
+                                    {% if notificacion.url %}
                                     <a href="{{ notificacion.url }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-arrow-right"></i> Ver detalles
                                     </a>
+                                    {% endif %}
+
+                                    <!-- NUEVO: botón borrar notificación leída -->
+                                    <button onclick="eliminarNotificacion({{ notificacion.id }})" 
+                                            class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -315,6 +327,46 @@ function crearNotificacionesPrueba() {
         });
     }
 }
+
+function borrarTodasNotificaciones() {
+    if (confirm("¿Eliminar TODAS las notificaciones? Esta acción no se puede deshacer.")) {
+        fetch('/notificaciones/eliminar-todas/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Todas las notificaciones fueron eliminadas');
+                location.reload();
+            } else {
+                alert('Error al eliminar notificaciones');
+            }
+        });
+    }
+}
+
+function eliminarNotificacion(id) {
+    fetch(`/notificaciones/eliminar/${id}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Error al eliminar notificación");
+        }
+    });
+}
+
 </script>
 
 <!-- Estilos adicionales -->

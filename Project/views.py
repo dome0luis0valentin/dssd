@@ -6,8 +6,9 @@ from Stage.models import Etapa
 from user.models import User
 from CoverageRequest.models import PedidoCobertura
 from .forms import ProyectoForm
-
+from user.wraps import session_required
 import requests
+
 url_bonita = "http://localhost:8080/bonita"
 
 def index(request):
@@ -116,12 +117,17 @@ def crear_proyecto(request):
 
     return render(request, "proyecto_crear.html", {"proyecto_form": proyecto_form})
 
+@session_required
 def etapas_proyecto(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-    
-    # Traemos todas las etapas del proyecto y sus pedidos relacionados (si existen)
-    etapas = Etapa.objects.filter(proyecto=proyecto).select_related('pedido', 'pedido__tipo_cobertura')
-    
+
+    # 🔹 Traer SOLO las etapas cuyo pedido de cobertura NO esté completo
+    etapas = (
+        Etapa.objects
+        .filter(proyecto=proyecto, pedido__estado=False)
+        .select_related('pedido', 'pedido__tipo_cobertura')
+    )
+
     return render(request, 'listado_etapas.html', {
         'proyecto': proyecto,
         'etapas': etapas,

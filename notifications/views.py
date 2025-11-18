@@ -137,3 +137,15 @@ def crear_notificacion(usuario, mensaje, tipo='info', url=None):
         url=url,
         leida=False
     )
+
+@session_required
+def eliminar_todas_notificaciones(request):
+    user_id = request.session.get("user_id")
+    Notificacion.objects.filter(usuario_id=user_id).delete()
+    return JsonResponse({"success": True})
+
+@session_required
+def eliminar_notificacion(request, id):
+    user_id = request.session.get("user_id")
+    Notificacion.objects.filter(id=id, usuario_id=user_id).delete()
+    return JsonResponse({"success": True})

@@ -8,6 +8,7 @@ from Stage.models import Etapa
 from datetime import timedelta
 from notifications.views import crear_notificacion
 from ONG.models import ONG   
+from Project.utils import actualizar_estado_proyecto_si_completo  # <-- nueva función
 
 @session_required
 def postular_compromiso(request, pedido_id):
@@ -58,25 +59,29 @@ def postular_compromiso(request, pedido_id):
 @session_required
 def compromisos_etapa(request, etapa_id):
     etapa = get_object_or_404(Etapa, id=etapa_id)
-    compromisos = etapa.pedido.compromisos.all()
+    pedido = etapa.pedido
+    compromisos = pedido.compromisos.all()
 
     calendario = None
 
-    # Crear calendario solo si NO hay compromisos totales
-    if not compromisos.filter(tipo="total").exists():
+    # Crear calendario solo si NO está completado
+    if not pedido.estado:
         dias_etapa = (etapa.fecha_fin - etapa.fecha_inicio).days + 1
         calendario = []
         for i in range(dias_etapa):
             dia = etapa.fecha_inicio + timedelta(days=i)
-            cubierto = compromisos.filter(tipo="parcial", fecha_inicio__lte=dia, fecha_fin__gte=dia).exists()
+            cubierto = compromisos.filter(
+                tipo="parcial", fecha_inicio__lte=dia, fecha_fin__gte=dia
+            ).exists()
             calendario.append({"fecha": dia, "cubierto": cubierto})
 
     return render(request, "lista_compromisos_etapa.html", {
         "etapa": etapa,
         "compromisos": compromisos,
-        "pedido": etapa.pedido,
+        "pedido": pedido,
         "calendario": calendario,
     })
+
 
     
 @session_required
@@ -87,6 +92,12 @@ def detalle_compromiso(request, compromiso_id):
         "compromiso": compromiso,
     })
 
+from django.shortcuts import get_object_or_404, redirect
+from .models import Compromiso
+from user.models import User
+from notifications.views import crear_notificacion
+from Project.utils import actualizar_estado_proyecto_si_completo  # <-- nueva función
+
 def aceptar_compromiso(request, id):
     """
     Acepta un compromiso:
@@ -94,48 +105,45 @@ def aceptar_compromiso(request, id):
     - Si es PARCIAL: actualiza las fechas cubiertas y si todo está cubierto, marca el pedido como completo.
     - Envía notificaciones a todos los usuarios de la ONG responsable.
     - No elimina el compromiso aceptado.
+    - Si todas las etapas del proyecto están completas, cambia el estado del proyecto a 'ejecucion'
+      y notifica a todas las ONG responsables de compromisos.
     """
     compromiso = get_object_or_404(Compromiso, id=id)
     pedido = compromiso.pedido
     etapa = pedido.etapas.first()
-    
-    # Obtener todos los usuarios de la ONG responsable
+    proyecto = etapa.proyecto
+
+    # Obtener todos los usuarios de la ONG responsable del compromiso
     usuarios = User.objects.filter(ong=compromiso.responsable)
 
+    # 🔹 Marcar el pedido como completo según el tipo de compromiso
     if compromiso.tipo == 'total':
         pedido.estado = True
         pedido.save()
 
-        # Notificar a todos los integrantes de la ONG responsable
-        for usuario in usuarios:
-            crear_notificacion(
-                usuario,
-                f"Felicidades, usted tiene un compromiso con la etapa '{etapa.nombre}' del proyecto '{etapa.proyecto.nombre}'",
-                tipo='success'
-            )
-        # Comentario: aquí se pueden eliminar compromisos pendientes de esta etapa
-        # y enviar otras notificaciones si hace falta
-
     elif compromiso.tipo == 'parcial':
         # Pseudocódigo para actualizar fechas parciales
         # actualizar_fechas_cubiertas(compromiso, etapa)
-        
         todas_fechas_cubiertas = True  # reemplazar por lógica real
         if todas_fechas_cubiertas:
             pedido.estado = True
             pedido.save()
-            # Comentario: eliminar otros compromisos parciales y enviar notificaciones a los afectados
+            # Comentario: eliminar otros compromisos parciales si hace falta
             # Compromiso.objects.filter(pedido=pedido).exclude(id=compromiso.id).delete()
-            # enviar_notificacion_usuarios(etapa)
 
-        for usuario in usuarios:
-            crear_notificacion(
-                usuario,
-                f"Felicidades, usted tiene un compromiso con la etapa '{etapa.nombre}' del proyecto '{etapa.proyecto.nombre}'",
-                tipo='success'
-            )
+    # 🔹 Notificar a los usuarios de la ONG responsable
+    for usuario in usuarios:
+        crear_notificacion(
+            usuario,
+            f"Felicidades, usted tiene un compromiso con la etapa '{etapa.nombre}' del proyecto '{proyecto.nombre}'",
+            tipo='success'
+        )
+
+    # 🔹 Nueva funcionalidad: actualizar estado del proyecto si todas las etapas están completas
+    actualizar_estado_proyecto_si_completo(proyecto)
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
+
 
 
 def rechazar_compromiso(request, id):
