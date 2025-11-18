@@ -117,60 +117,6 @@ def finalizar_etapas(request, proyecto_id):
     print("✅ Notificación enviada a todos los usuarios")
     return redirect("proyecto_lista")  # o cualquier vista general que uses
 
-@session_required
-def crear_notificaciones_prueba(request):
-    """Vista para crear notificaciones de prueba"""
-    user_context = get_user_context(request)
-    if not user_context:
-        return redirect("login")
-    
-    usuario = user_context['usuario']
-    
-    # Crear notificaciones de diferentes tipos
-    notificaciones_prueba = [
-        {
-            'mensaje': 'Bienvenido al sistema DSSD. Tu cuenta ha sido activada correctamente.',
-            'tipo': 'success',
-            'url': '/dashboard/'
-        },
-        {
-            'mensaje': 'Se ha creado un nuevo proyecto que puede interesarte para colaborar.',
-            'tipo': 'info',
-            'url': '/proyecto/'
-        },
-        {
-            'mensaje': 'Tienes compromisos pendientes que requieren tu atención urgente.',
-            'tipo': 'warning',
-            'url': '/compromisos/'
-        },
-        {
-            'mensaje': 'El Consejo Directivo ha realizado una observación en tu proyecto.',
-            'tipo': 'danger',
-            'url': '/observaciones/'
-        },
-        {
-            'mensaje': 'Tu solicitud de colaboración ha sido aceptada exitosamente.',
-            'tipo': 'success',
-            'url': '/panel-seguimiento/'
-        }
-    ]
-    
-    # Crear las notificaciones
-    for noti_data in notificaciones_prueba:
-        Notificacion.objects.create(
-            usuario=usuario,
-            mensaje=noti_data['mensaje'],
-            tipo=noti_data['tipo'],
-            url=noti_data['url'],
-            leida=False
-        )
-    
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'success': True, 'cantidad': len(notificaciones_prueba)})
-    else:
-        messages.success(request, f'Se han creado {len(notificaciones_prueba)} notificaciones de prueba')
-        return redirect('lista_notificaciones')
-
 def crear_notificacion(usuario, mensaje, tipo='info', url=None):
     """
     Función helper para crear notificaciones programáticamente
