@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Compromisos - {{ etapa.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>
+        <i class="bi bi-journal-text"></i> Compromisos de la etapa: {{ etapa.nombre }}
+    </h3>
+    <p class="text-muted">{{ etapa.descripcion }}</p>
+
+    <a href="{{ request.META.HTTP_REFERER }}" class="btn btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    {% if compromisos %}
+        <ul class="list-group">
+            {% for compromiso in compromisos %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                
+                <div>
+                    <strong>{{ compromiso.responsable.nombre }}</strong>
+                    <br>
+                    <small class="text-muted">
+                        {{ compromiso.tipo|capfirst }} — {{ compromiso.detalle }}
+                    </small>
+                    <br>
+                    <small class="text-muted">
+                        {{ compromiso.fecha_inicio }}{% if compromiso.fecha_fin %} / {{ compromiso.fecha_fin }}{% endif %}
+                    </small>
+                </div>
+
+                <span class="badge bg-primary">{{ compromiso.pedido }}</span>
+
+                <div class="btn-group">
+                    <!-- Ver más -->
+                    <a href="{% url 'detalle_compromiso' compromiso.id %}" class="btn btn-sm btn-outline-info">
+                        <i class="bi bi-eye"></i> Ver más
+                    </a>
+
+                    <!-- Aceptar -->
+                    <a href="{% url 'aceptar_compromiso' compromiso.id %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-check2-circle"></i> Aceptar
+                    </a>
+
+                    <!-- Rechazar -->
+                    <a href="{% url 'rechazar_compromiso' compromiso.id %}" class="btn btn-sm btn-danger">
+                        <i class="bi bi-x-circle"></i> Rechazar
+                    </a>
+                </div>
+
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i> Esta etapa no tiene compromisos registrados.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

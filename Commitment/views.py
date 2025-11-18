@@ -4,6 +4,7 @@ from .forms import CompromisoForm
 from CoverageRequest.models import PedidoCobertura
 from user.wraps import session_required
 from user.models import User
+from Stage.models import Etapa
 
 @session_required
 def postular_compromiso(request, pedido_id):
@@ -29,3 +30,35 @@ def postular_compromiso(request, pedido_id):
         form = CompromisoForm(pedido=pedido)
 
     return render(request, 'postular_compromiso.html', {'form': form, 'pedido': pedido, 'etapa': etapa})
+
+@session_required
+def lista_compromisos_etapa(request, etapa_id):
+    etapa = get_object_or_404(Etapa, id=etapa_id)
+
+    # Recuperamos todos los pedidos de cobertura de la etapa
+    pedidos = PedidoCobertura.objects.filter(etapas=etapa)
+
+    # Sacamos los compromisos de esos pedidos
+    compromisos = Compromiso.objects.filter(pedido__in=pedidos).select_related("responsable", "pedido")
+
+    return render(request, "lista_compromisos_etapa.html", {
+        "etapa": etapa,
+        "compromisos": compromisos,
+    })
+    
+@session_required
+def detalle_compromiso(request, compromiso_id):
+    compromiso = get_object_or_404(Compromiso, id=compromiso_id)
+
+    return render(request, "detalle_compromiso.html", {
+        "compromiso": compromiso,
+    })
+
+
+def aceptar_compromiso(request, id):
+    # lógica para aceptar
+    return redirect(request.META.get("HTTP_REFERER", "/"))
+
+def rechazar_compromiso(request, id):
+    # lógica para rechazar
+    return redirect(request.META.get("HTTP_REFERER", "/"))

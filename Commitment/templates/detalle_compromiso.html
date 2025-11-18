@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle del compromiso{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3><i class="bi bi-file-text"></i> Detalle del Compromiso</h3>
+    <hr>
+
+    <p><strong>Responsable:</strong> {{ compromiso.responsable.nombre }}</p>
+    <p><strong>Tipo:</strong> {{ compromiso.tipo|capfirst }}</p>
+    <p><strong>Detalle:</strong></p>
+    <div class="alert alert-secondary">
+        {{ compromiso.detalle }}
+    </div>
+
+    <p>
+        <strong>Fecha de inicio:</strong> {{ compromiso.fecha_inicio }}<br>
+        <strong>Fecha de fin:</strong> {{ compromiso.fecha_fin|default:"Sin definir" }}
+    </p>
+
+    <a href="{{ request.META.HTTP_REFERER }}" class="btn btn-outline-secondary mt-3">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+{% endblock %}

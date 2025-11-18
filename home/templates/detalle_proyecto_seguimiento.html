@@ -193,6 +193,11 @@
                                     {% endif %}
                                 </div>
                             </div>
+                                <!-- 🔥 Botón agregado -->
+                            <div class="text-end mt-3">
+                                <a href="{% url 'compromisos_etapa' etapa_info.etapa.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-journal-text"></i> Compromisos
+                                </a>
                         </div>
                     </div>
                     {% endfor %}
