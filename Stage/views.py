@@ -2,9 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Etapa
 from .forms import EtapaForm
 from Project.models import Proyecto
-from CoverageRequest.models import PedidoCobertura
-url_bonita = "http://localhost:8080/bonita"
+import json
 import requests
+
+url_bonita = "http://localhost:8080/bonita"
 
 def cargar_etapas(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
@@ -14,41 +15,27 @@ def cargar_etapas(request, proyecto_id):
         if form.is_valid():
             form.save(proyecto=proyecto.id)
 
-            # Diferenciamos según el botón presionado
             if request.POST.get("action") == "agregar":
-                # Redirigir a la misma página para agregar otra etapa
                 return redirect('cargar_etapas', proyecto_id=proyecto.id)
+
             elif request.POST.get("action") == "guardar":
-                # 🔹 Armar payload completo
-                etapas = proyecto.etapas.all()
-                etapas_payload = []
 
-                for etapa in etapas:
-                    pedido = etapa.pedido
-                    tipo_cobertura = pedido.tipo_cobertura if pedido else None
-
-                    etapas_payload.append({
-                        "nombre": etapa.nombre,
-                        "descripcion": etapa.descripcion,
-                        "fecha_inicio": etapa.fecha_inicio.strftime("%Y-%m-%d"),
-                        "fecha_fin": etapa.fecha_fin.strftime("%Y-%m-%d") if etapa.fecha_fin else None,
-                        "pedido": {
-                            "estado": pedido.estado if pedido else None,
-                            "tipo_cobertura": tipo_cobertura.nombre if tipo_cobertura else None
-                        }
-                    })
+                # SOLO persistenceId_string (lo único permitido por el contrato)
+                etapas_payload = [
+                    {"persistenceId_string": str(etapa.id)}
+                    for etapa in proyecto.etapas.all()
+                ]
 
                 payload = {
-                    "proyectoInput": {
+                    "proyectoBDMInput": {
                         "nombre": proyecto.nombre,
                         "descripcion": proyecto.descripcion,
                         "estado": proyecto.estado,
-                        "originador": proyecto.originador.nombre,
+                        "originador": proyecto.originador.id,
                         "etapas": etapas_payload
                     }
                 }
 
-                # 🔹 Enviar a Bonita
                 try:
                     cookies = request.session.get("cookies")
                     headers = request.session.get("headers")
@@ -60,6 +47,9 @@ def cargar_etapas(request, proyecto_id):
                     start_url = f"{url_bonita}/API/bpm/process/{process_id}/instantiation"
                     resp = requests.post(start_url, json=payload, cookies=cookies, headers=headers)
 
+                    print("📦 Payload a Bonita:")
+                    print(json.dumps(payload, indent=2))
+
                     if resp.status_code == 200:
                         print("✅ Proyecto completo enviado a Bonita:", resp.json())
                     else:
@@ -69,6 +59,7 @@ def cargar_etapas(request, proyecto_id):
                     print("❌ Error al sincronizar con Bonita:", e)
 
                 return redirect('detalle_proyecto', pk=proyecto.id)
+
     else:
         form = EtapaForm()
 
@@ -76,4 +67,3 @@ def cargar_etapas(request, proyecto_id):
         'form': form,
         'proyecto': proyecto,
     })
-
