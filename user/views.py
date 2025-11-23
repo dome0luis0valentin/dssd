@@ -11,6 +11,21 @@ import requests
 DEFAULT_USER_BONITA = "walter.bates"
 url_bonita = "http://localhost:8080/bonita"
 
+# Obtener token de Render
+def obtener_token_render(email, password):
+    url = "https://dssd-cloud-bpqf.onrender.com/auth/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "password",
+        "username": email,
+        "password": password
+    }
+    response = requests.post(url, data=data, headers=headers)
+    if response.status_code == 200:
+        return response.json().get("access_token")
+    else:
+        raise Exception("Error al obtener token de Render", response.text)
+
 # Login en Bonita
 def bonita_login(request, bonita_username, bonita_password):
     url = f"{url_bonita}/loginservice"
@@ -54,6 +69,10 @@ def login_view(request):
                 # Guardamos en session el login local
                 request.session["user_id"] = user.id
                 request.session["user_name"] = f"{user.nombre} {user.apellido}"
+                
+                # Obtenemos token de Render
+                token_render = obtener_token_render(email, password)
+                request.session["jwt_token_render"] = token_render
 
                 # Usamos el username real para Bonita
                 bonita_username = user.username

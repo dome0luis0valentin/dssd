@@ -1,3 +1,5 @@
+import base64
+from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import inlineformset_factory
 from django.core.paginator import Paginator
@@ -55,6 +57,7 @@ def index(request):
         "proyectos": proyectos_page
     })
 
+
 def crear_proyecto(request):
     if request.method == "POST":
         proyecto_form = ProyectoForm(request.POST)
@@ -67,48 +70,6 @@ def crear_proyecto(request):
             proyecto.originador = user.ong
             proyecto.estado = "Proceso"
             proyecto.save()
-
-            try:
-                cookies = request.session.get("cookies")
-                headers = request.session.get("headers")
-                process_id_proyecto = request.session.get("process_id_ciclo_vida")
-                process_id_observacion = request.session.get("process_id_ciclo_observacion")
-
-                if not cookies or not headers:
-                    raise Exception("No hay sesión de Bonita activa")
-
-                #  Elegí cuál usar según el contexto
-                process_id = process_id_proyecto  # o process_id_observacion
-
-                if not process_id:
-                    raise Exception("No se encontró la ID del proceso en la sesión")
-
-                payload = {
-                    "proyectoInput": {
-                        "nombre": proyecto.nombre,
-                        "descripcion": proyecto.descripcion,
-                        """
-                        #"presupuesto": float(proyecto.presupuesto or 0),
-                        #"ubicacion": proyecto.ubicacion,
-                        "fechaInicio": (
-                            proyecto.fecha_inicio.strftime("%Y-%m-%d")
-                            if proyecto.fecha_inicio else None
-                        ),
-                        """
-                        "ong": proyecto.originador.nombre if proyecto.originador else None,
-                    }
-                }
-
-                start_url = f"{url_bonita}/API/bpm/process/{process_id}/instantiation"
-                resp_start = requests.post(start_url, json=payload, cookies=cookies, headers=headers)
-
-                if resp_start.status_code == 200:
-                    print("✅ Proyecto creado también en Bonita:", resp_start.json())
-                else:
-                    print("⚠️ Error al crear en Bonita:", resp_start.text)
-
-            except Exception as e:
-                print("❌ No se pudo sincronizar con Bonita:", e)
 
             return redirect("cargar_etapas", proyecto_id=proyecto.id)
 
