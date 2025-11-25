@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Consultar Datos en Bonita{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-search"></i> Consultar Datos en Bonita</h3>
+                </div>
+                <div class="card-body">
+                    
+                    {% if error %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                    {% endif %}
+                    
+                    {% if success %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> {{ message }}
+                        </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group mb-3">
+                            <label for="case_id" class="form-label">
+                                <i class="fas fa-hashtag"></i> Case ID de Bonita
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="case_id" 
+                                   name="case_id" 
+                                   value="{{ current_case_id|default:'' }}"
+                                   placeholder="Ej: 123456789">
+                            <div class="form-text">
+                                {% if current_case_id %}
+                                    Case ID actual en sesión: <strong>{{ current_case_id }}</strong>
+                                {% else %}
+                                    No hay Case ID en la sesión actual
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Consultar Datos
+                            </button>
+                            <a href="{% url 'obtener_procesos_bonita' %}" class="btn btn-outline-info">
+                                <i class="fas fa-list"></i> Ver Todos los Procesos
+                            </a>
+                        </div>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> ¿Qué hace esta consulta?</h5>
+                        <ul class="mb-0">
+                            <li><strong>Variables del proceso:</strong> Muestra todas las variables almacenadas en el caso</li>
+                            <li><strong>Objetos BDM:</strong> Consulta los Business Objects creados</li>
+                            <li><strong>Estado del proceso:</strong> Información sobre el estado actual</li>
+                            <li><strong>Tareas activas:</strong> Lista las tareas pendientes o en progreso</li>
+                        </ul>
+                        <p class="mt-2 mb-0">
+                            <small><strong>Nota:</strong> Los resultados se muestran en los logs de la consola del servidor.</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

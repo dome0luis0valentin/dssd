@@ -98,13 +98,6 @@ def get_navigation_menu(user):
             'active': False
         })
     
-    if permissions['can_create_projects']:
-        menu_items.append({
-            'label': 'Crear Proyecto',
-            'url': 'crear_proyecto',
-            'icon': 'bi-plus-circle',
-            'active': False
-        })
     
     # Solo añadir URLs que existen para evitar errores
     from django.urls import reverse, NoReverseMatch

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+
+{% block title %}Ejecutar Tarea Manualmente{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">🚀 Ejecutar Tarea Manualmente</h2>
+            
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    ❌ {{ error }}
+                </div>
+            {% endif %}
+            
+            {% if success %}
+                <div class="alert alert-success" role="alert">
+                    ✅ {{ message }}
+                </div>
+                
+                {% if resultado %}
+                    <div class="alert alert-info">
+                        <h5>🎯 Resultado de Ejecución:</h5>
+                        <p><strong>Case ID:</strong> {{ case_id }}</p>
+                        <p><strong>Tarea:</strong> {{ task_name }}</p>
+                        <p><strong>Estado:</strong> <span class="badge badge-success">Ejecutada Exitosamente</span></p>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <h5>⚠️ Resultado de Ejecución:</h5>
+                        <p><strong>Case ID:</strong> {{ case_id }}</p>
+                        <p><strong>Tarea:</strong> {{ task_name }}</p>
+                        <p><strong>Estado:</strong> <span class="badge badge-warning">Error en Ejecución</span></p>
+                    </div>
+                {% endif %}
+                
+                {% if tareas_disponibles %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>📋 Tareas Disponibles en el Caso</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nombre</th>
+                                            <th>Display Name</th>
+                                            <th>Estado</th>
+                                            <th>Tipo</th>
+                                            <th>Asignado a</th>
+                                            <th>Última Actualización</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for tarea in tareas_disponibles %}
+                                        <tr>
+                                            <td>{{ tarea.id }}</td>
+                                            <td>{{ tarea.name|default:"-" }}</td>
+                                            <td>{{ tarea.displayName|default:"-" }}</td>
+                                            <td>
+                                                <span class="badge badge-{% if tarea.state == 'ready' %}success{% elif tarea.state == 'completed' %}secondary{% else %}warning{% endif %}">
+                                                    {{ tarea.state }}
+                                                </span>
+                                            </td>
+                                            <td>{{ tarea.type|default:"-" }}</td>
+                                            <td>{{ tarea.assigned_id|default:"No asignado" }}</td>
+                                            <td>{{ tarea.last_update_date|default:"-" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>🎯 Ejecutar Tarea de Creación de Proyecto</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="case_id">Case ID de Bonita:</label>
+                            <input type="text" class="form-control" id="case_id" name="case_id" 
+                                   value="{{ current_case_id|default:'' }}" 
+                                   placeholder="Ingresa el Case ID o se usará el de la sesión">
+                            <small class="form-text text-muted">
+                                {% if current_case_id %}
+                                    Case ID actual en sesión: {{ current_case_id }}
+                                {% else %}
+                                    No hay Case ID en la sesión actual
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task_name">Nombre de la Tarea:</label>
+                            <input type="text" class="form-control" id="task_name" name="task_name" 
+                                   value="Creación de Proyecto" 
+                                   placeholder="Nombre de la tarea a buscar y ejecutar">
+                            <small class="form-text text-muted">
+                                Nombre de la tarea que se buscará en el proceso de Bonita
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="proyecto_id">Proyecto (Opcional):</label>
+                            <select class="form-control" id="proyecto_id" name="proyecto_id">
+                                <option value="">-- Seleccionar Proyecto --</option>
+                                {% for proyecto in proyectos %}
+                                    <option value="{{ proyecto.id }}">{{ proyecto.nombre }} (ID: {{ proyecto.id }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Selecciona un proyecto para usar sus datos en la ejecución de la tarea
+                            </small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    🚀 Ejecutar Tarea
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'consultar_datos_bonita' %}" class="btn btn-info btn-block">
+                                    🔍 Consultar Datos Bonita
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6>ℹ️ Información</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Funcionalidad:</strong> Esta herramienta permite ejecutar manualmente la tarea "Creación de Proyecto" en un proceso de Bonita.</p>
+                    <ul>
+                        <li>🔍 <strong>Busca automáticamente</strong> la tarea por diferentes nombres posibles</li>
+                        <li>📋 <strong>Obtiene el contrato</strong> de la tarea para conocer qué datos necesita</li>
+                        <li>📦 <strong>Envía los datos</strong> del proyecto seleccionado a la tarea</li>
+                        <li>✅ <strong>Ejecuta la tarea</strong> y muestra el resultado</li>
+                        <li>📊 <strong>Lista todas las tareas</strong> disponibles en el caso para debug</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    ← Volver al Inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

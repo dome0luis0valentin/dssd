@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Verificar Tarea Ejecutada{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">🔍 Verificar Datos de Tarea Ejecutada</h2>
+            
+            {% if error %}
+                <div class="alert alert-danger" role="alert">
+                    ❌ {{ error }}
+                </div>
+            {% endif %}
+            
+            {% if success %}
+                <div class="alert alert-success" role="alert">
+                    ✅ {{ message }}
+                </div>
+                
+                <div class="row">
+                    <!-- Información General -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>📊 Información General</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Case ID:</strong> {{ case_id }}</p>
+                                <p><strong>Tarea:</strong> {{ task_name }}</p>
+                                {% if proyecto %}
+                                    <p><strong>Proyecto:</strong> {{ proyecto.nombre }} (ID: {{ proyecto.id }})</p>
+                                    <p><strong>Descripción:</strong> {{ proyecto.descripcion }}</p>
+                                    <p><strong>Estado:</strong> {{ proyecto.estado }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumen de Verificación -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>✅ Resumen de Verificación</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if verificacion %}
+                                    <div class="mb-2">
+                                        <span class="badge badge-{% if verificacion.variables_found %}success{% else %}warning{% endif %}">
+                                            Variables: {% if verificacion.variables_found %}✅ Encontradas{% else %}⚠️ No encontradas{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge badge-{% if verificacion.bdm_updated %}success{% else %}warning{% endif %}">
+                                            BDM: {% if verificacion.bdm_updated %}✅ Actualizado{% else %}⚠️ Sin actualizar{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge badge-info">
+                                            Próximas tareas: {{ verificacion.next_tasks }}
+                                        </span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <span class="badge badge-success">
+                                            Tareas completadas: {{ verificacion.completed_tasks }}
+                                        </span>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted">No se pudo realizar la verificación completa.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Variables del Proceso -->
+                {% if variables_proceso %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>📋 Variables del Proceso</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>Valor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for nombre, valor in variables_proceso.items %}
+                                        <tr>
+                                            <td><code>{{ nombre }}</code></td>
+                                            <td>
+                                                {% if valor %}
+                                                    {{ valor|truncatechars:100 }}
+                                                {% else %}
+                                                    <span class="text-muted">null</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Tareas Disponibles -->
+                {% if tareas_disponibles %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>📋 Estado de Tareas</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Nombre</th>
+                                            <th>Display Name</th>
+                                            <th>Estado</th>
+                                            <th>Asignado a</th>
+                                            <th>Última Actualización</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for tarea in tareas_disponibles %}
+                                        <tr class="{% if tarea.state == 'completed' %}table-success{% elif tarea.state == 'ready' %}table-info{% endif %}">
+                                            <td>{{ tarea.id }}</td>
+                                            <td>{{ tarea.name|default:"-" }}</td>
+                                            <td>{{ tarea.displayName|default:"-" }}</td>
+                                            <td>
+                                                <span class="badge badge-{% if tarea.state == 'ready' %}primary{% elif tarea.state == 'completed' %}success{% else %}secondary{% endif %}">
+                                                    {{ tarea.state }}
+                                                </span>
+                                            </td>
+                                            <td>{{ tarea.assigned_id|default:"No asignado" }}</td>
+                                            <td>{{ tarea.last_update_date|default:"-" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+            
+            <!-- Formulario de Verificación -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>🔍 Verificar Tarea</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="case_id">Case ID de Bonita:</label>
+                            <input type="text" class="form-control" id="case_id" name="case_id" 
+                                   value="{{ current_case_id|default:'' }}" 
+                                   placeholder="Ingresa el Case ID o se usará el de la sesión">
+                            <small class="form-text text-muted">
+                                {% if current_case_id %}
+                                    Case ID actual en sesión: {{ current_case_id }}
+                                {% else %}
+                                    No hay Case ID en la sesión actual
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task_name">Nombre de la Tarea:</label>
+                            <input type="text" class="form-control" id="task_name" name="task_name" 
+                                   value="Creación de Proyecto" 
+                                   placeholder="Nombre de la tarea a verificar">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="proyecto_id">Proyecto (Opcional):</label>
+                            <select class="form-control" id="proyecto_id" name="proyecto_id">
+                                <option value="">-- Seleccionar Proyecto --</option>
+                                {% for proyecto in proyectos %}
+                                    <option value="{{ proyecto.id }}">{{ proyecto.nombre }} (ID: {{ proyecto.id }})</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Selecciona un proyecto para verificar sus datos específicos
+                            </small>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary btn-block">
+                                    🔍 Verificar Datos
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'ejecutar_tarea_manual' %}" class="btn btn-info btn-block">
+                                    🚀 Ejecutar Tarea
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6>ℹ️ Qué verifica esta herramienta</h6>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>🔍 <strong>Variables del proceso:</strong> Verifica que las variables se guardaron correctamente</li>
+                        <li>🏗️ <strong>Business Data Model:</strong> Confirma que los datos se persistieron en el BDM</li>
+                        <li>📋 <strong>Estado de tareas:</strong> Muestra qué tareas están disponibles y completadas</li>
+                        <li>📊 <strong>Flujo del proceso:</strong> Verifica que el proceso avanzó correctamente</li>
+                        <li>✅ <strong>Validación completa:</strong> Resumen del estado general del proceso</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'consultar_datos_bonita' %}" class="btn btn-secondary">
+                    📊 Consultar Datos Bonita
+                </a>
+                <a href="{% url 'home' %}" class="btn btn-secondary ml-2">
+                    ← Volver al Inicio
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
