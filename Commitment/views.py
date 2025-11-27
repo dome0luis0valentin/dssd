@@ -242,16 +242,19 @@ def aceptar_compromiso(request, id):
         headers = request.session.get("headers")
         bonita_user_id = request.session.get("bonita_user_id")
         case_id = request.session.get('case_id') # asegúrate de tener el case_id de Bonita
-        
+        """
         url_update_var = f"{url_bonita}/API/bpm/caseVariable/{case_id}/pedido_estado"
-        data = True  # el pedido está completo
+        data = {
+            "value": True,
+            "type": "java.lang.Boolean"
+        }  # el pedido está completo
 
         resp_var = requests.put(url_update_var, json=data, cookies=cookies, headers=headers, timeout=30)
         if resp_var.status_code in (200, 204):
             print("✅ Variable 'pedido_estado' actualizada en Bonita")
         else:
             print(f"❌ Error actualizando variable en Bonita: {resp_var.text}")
-        
+        """
         print("Pedido completado → avanzar tarea en Bonita")
 
         url_get_task = f"{url_bonita}/API/bpm/humanTask"
@@ -279,7 +282,10 @@ def aceptar_compromiso(request, id):
 
                     # 3️⃣ Ejecutar la tarea para pasar a "Entrega de donaciones"
                     url_execute = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
-                    resp2 = requests.post(url_execute, cookies=cookies, headers=headers, timeout=30)
+                    payload = {
+                        "cubierto": True
+                    }
+                    resp2 = requests.post(url_execute, json=payload ,cookies=cookies, headers=headers, timeout=30)
 
                     if resp2.status_code == 204:
                         print("🚀 La tarea 'Seleccion de candidato' fue completada en Bonita")
