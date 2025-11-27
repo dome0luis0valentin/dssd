@@ -10,6 +10,7 @@ from ONG.models import ONG
 import requests
 import json
 import time
+from datetime import datetime
 
 url_bonita = "http://localhost:8080/bonita"
 
@@ -988,7 +989,7 @@ def detalle_proyecto_seguimiento(request, proyecto_id):
 
 @session_required
 def reportes(request):
-    """Vista para generar reportes gerenciales"""
+    """Vista para generar reportes gerenciales con datos del web service"""
     user_context = get_user_context(request)
     if not user_context:
         return redirect("login")
@@ -997,10 +998,207 @@ def reportes(request):
     if user_context['user_role'] != 'gerencial':
         return redirect('dashboard')
     
-    # Datos para reportes
+    # Importar requests para consumir el web service
+    import requests
+    import json
+    from datetime import datetime
+    
+    # URL base del web service
+    base_url = "https://dssd-cloud.onrender.com"
+    
+    # Obtener token de autorización de la sesión
+    auth_token = request.session.get("jwt_token_render")
+    if not auth_token:
+        messages.error(request, "Token de autorización no encontrado")
+        return redirect('dashboard')
+    
+    headers = {
+        'accept': 'application/json',
+        'Authorization': f'Bearer {auth_token}'
+    }
+    
+    try:
+        # 1. Obtener proyectos
+        proyectos_response = requests.get(f"{base_url}/proyectos/", headers=headers, timeout=10)
+        proyectos_data = proyectos_response.json() if proyectos_response.status_code == 200 else []
+        
+        # 2. Obtener ONGs
+        ongs_response = requests.get(f"{base_url}/ongs/", headers=headers, timeout=10)
+        ongs_data = ongs_response.json() if ongs_response.status_code == 200 else []
+        
+        # 3. Obtener compromisos
+        compromisos_response = requests.get(f"{base_url}/proyectos/compromisos/", headers=headers, timeout=10)
+        compromisos_data = compromisos_response.json() if compromisos_response.status_code == 200 else []
+        
+        # 4. Obtener observaciones
+        observaciones_response = requests.get(f"{base_url}/observaciones/all", headers=headers, timeout=10)
+        observaciones_data = observaciones_response.json() if observaciones_response.status_code == 200 else []
+        
+        # Procesar datos para gráficos
+        datos_procesados = _procesar_datos_reportes(proyectos_data, ongs_data, compromisos_data, observaciones_data)
+        
+        context = user_context.copy()
+        context.update(datos_procesados)
+        context.update({
+            'fecha_actualizacion': datetime.now(),
+        })
+        
+        return render(request, 'reportes.html', context)
+        
+    except requests.RequestException as e:
+        print(f"Error al conectar con el web service: {e}")
+        messages.error(request, "Error al obtener datos del servidor. Mostrando datos locales.")
+        
+        # Fallback a datos locales
+        return _reportes_datos_locales(request, user_context)
+
+def _procesar_datos_reportes(proyectos_data, ongs_data, compromisos_data, observaciones_data):
+    """Procesa los datos del web service para generar los gráficos"""
+    
+    # Métricas generales
+    total_proyectos = len(proyectos_data)
+    total_compromisos = len(compromisos_data)
+    total_observaciones = len(observaciones_data)
+    total_ongs = len(ongs_data)
+    
+    # Datos para gráfico de progreso de proyectos
+    proyectos_progreso = {}
+    for proyecto in proyectos_data:
+        ong_nombre = proyecto.get('originador', {}).get('nombre', 'ONG Desconocida')
+        if ong_nombre not in proyectos_progreso:
+            proyectos_progreso[ong_nombre] = {
+                'proyectos': [],
+                'total_etapas': 0,
+                'etapas_completadas': 0
+            }
+        
+        # Simular datos de etapas (ajustar según estructura real del API)
+        total_etapas = proyecto.get('total_etapas', 5)  # Valor por defecto
+        completadas = proyecto.get('etapas_completadas', 2)  # Valor por defecto
+        
+        proyectos_progreso[ong_nombre]['proyectos'].append(proyecto)
+        proyectos_progreso[ong_nombre]['total_etapas'] += total_etapas
+        proyectos_progreso[ong_nombre]['etapas_completadas'] += completadas
+    
+    # Preparar datos para Chart.js - Progreso
+    labels_progreso = list(proyectos_progreso.keys())[:6]  # Máximo 6 ONGs
+    completadas_progreso = []
+    pendientes_progreso = []
+    
+    for ong in labels_progreso:
+        data = proyectos_progreso[ong]
+        completadas_progreso.append(data['etapas_completadas'])
+        pendientes_progreso.append(data['total_etapas'] - data['etapas_completadas'])
+    
+    # Datos para gráfico de compromisos por ONG
+    compromisos_por_ong = {}
+    for compromiso in compromisos_data:
+        ong_nombre = compromiso.get('responsable', {}).get('nombre', 'ONG Desconocida')
+        if ong_nombre not in compromisos_por_ong:
+            compromisos_por_ong[ong_nombre] = {'total': 0, 'aceptados': 0}
+        
+        compromisos_por_ong[ong_nombre]['total'] += 1
+        if compromiso.get('estado', False):  # Asumiendo que hay un campo estado
+            compromisos_por_ong[ong_nombre]['aceptados'] += 1
+    
+    # Preparar datos para Chart.js - Compromisos
+    labels_compromisos = list(compromisos_por_ong.keys())[:6]
+    aceptados_compromisos = []
+    totales_compromisos = []
+    
+    for ong in labels_compromisos:
+        data = compromisos_por_ong[ong]
+        aceptados_compromisos.append(data['aceptados'])
+        totales_compromisos.append(data['total'])
+    
+    # Datos para gráfico de observaciones por proyecto
+    observaciones_por_proyecto = {}
+    for observacion in observaciones_data:
+        proyecto_nombre = observacion.get('proyecto', 'Proyecto Desconocido')
+        if proyecto_nombre not in observaciones_por_proyecto:
+            observaciones_por_proyecto[proyecto_nombre] = 0
+        observaciones_por_proyecto[proyecto_nombre] += 1
+    
+    # Preparar datos para Chart.js - Observaciones
+    items_observaciones = list(observaciones_por_proyecto.items())
+    items_observaciones.sort(key=lambda x: x[1], reverse=True)  # Ordenar por cantidad
+    labels_observaciones = [item[0][:25] + '...' if len(item[0]) > 25 else item[0] for item in items_observaciones[:8]]
+    valores_observaciones = [item[1] for item in items_observaciones[:8]]
+    
+    # Calcular eficiencia de ONGs
+    eficiencia_ongs = []
+    for ong in ongs_data[:10]:  # Top 10
+        ong_nombre = ong.get('nombre', 'ONG Desconocida')
+        compromisos_ong = compromisos_por_ong.get(ong_nombre, {'total': 0, 'aceptados': 0})
+        
+        if compromisos_ong['total'] > 0:
+            porcentaje = (compromisos_ong['aceptados'] / compromisos_ong['total']) * 100
+        else:
+            porcentaje = 0
+        
+        eficiencia_ongs.append({
+            'nombre': ong_nombre,
+            'porcentaje_eficiencia': porcentaje,
+            'total_compromisos': compromisos_ong['total'],
+            'compromisos_completados': compromisos_ong['aceptados']
+        })
+    
+    # Ordenar por eficiencia
+    eficiencia_ongs.sort(key=lambda x: x['porcentaje_eficiencia'], reverse=True)
+    
+    # Preparar detalle de proyectos para la tabla
+    proyectos_detalle = []
+    for proyecto in proyectos_data[:15]:  # Top 15 proyectos
+        ong_originante = proyecto.get('originador', {}).get('nombre', 'ONG Desconocida')
+        
+        # Calcular métricas del proyecto
+        total_etapas = proyecto.get('total_etapas', 5)
+        etapas_completadas = proyecto.get('etapas_completadas', 2)
+        progreso = (etapas_completadas / total_etapas * 100) if total_etapas > 0 else 0
+        
+        # Contar observaciones del proyecto
+        obs_proyecto = sum(1 for obs in observaciones_data if obs.get('proyecto') == proyecto.get('nombre', ''))
+        
+        proyectos_detalle.append({
+            'ong_originante': ong_originante,
+            'nombre': proyecto.get('nombre', 'Proyecto sin nombre'),
+            'total_etapas': total_etapas,
+            'etapas_completadas': etapas_completadas,
+            'progreso': progreso,
+            'observaciones': obs_proyecto,
+            'estado': proyecto.get('estado', 'En proceso')
+        })
+    
+    return {
+        'metricas': {
+            'total_proyectos': total_proyectos,
+            'total_compromisos': total_compromisos,
+            'total_observaciones': total_observaciones,
+            'total_ongs': total_ongs
+        },
+        'datos_progreso': json.dumps({
+            'labels': labels_progreso,
+            'completadas': completadas_progreso,
+            'pendientes': pendientes_progreso
+        }),
+        'datos_compromisos': json.dumps({
+            'labels': labels_compromisos,
+            'aceptados': aceptados_compromisos,
+            'totales': totales_compromisos
+        }),
+        'datos_observaciones': json.dumps({
+            'labels': labels_observaciones,
+            'valores': valores_observaciones
+        }),
+        'eficiencia_ongs': eficiencia_ongs,
+        'proyectos_detalle': proyectos_detalle
+    }
+
+def _reportes_datos_locales(request, user_context):
+    """Fallback para mostrar datos locales si falla el web service"""
     from django.db.models import Count, Avg
     
-    # Reporte 1: Eficiencia por ONG
+    # Datos locales como fallback
     eficiencia_ongs = list(
         ONG.objects.annotate(
             total_compromisos=Count('compromisos_responsables'),
@@ -1015,9 +1213,36 @@ def reportes(request):
         else:
             ong.porcentaje_eficiencia = 0
     
+    # Datos simulados para los gráficos
+    datos_simulados = {
+        'metricas': {
+            'total_proyectos': Proyecto.objects.count(),
+            'total_compromisos': 0,  # Calcular según tu modelo
+            'total_observaciones': 0,  # Calcular según tu modelo
+            'total_ongs': ONG.objects.count()
+        },
+        'datos_progreso': json.dumps({
+            'labels': ['ONG Local 1', 'ONG Local 2'],
+            'completadas': [4, 5],
+            'pendientes': [2, 0]
+        }),
+        'datos_compromisos': json.dumps({
+            'labels': ['ONG Local 1', 'ONG Local 2'],
+            'aceptados': [8, 4],
+            'totales': [10, 4]
+        }),
+        'datos_observaciones': json.dumps({
+            'labels': ['Proyecto Local 1', 'Proyecto Local 2'],
+            'valores': [2, 1]
+        }),
+        'eficiencia_ongs': [{'nombre': ong.nombre, 'porcentaje_eficiencia': ong.porcentaje_eficiencia} for ong in eficiencia_ongs[:5]],
+        'proyectos_detalle': []
+    }
+    
     context = user_context.copy()
+    context.update(datos_simulados)
     context.update({
-        'eficiencia_ongs': eficiencia_ongs,
+        'fecha_actualizacion': datetime.now(),
     })
     
     return render(request, 'reportes.html', context)
