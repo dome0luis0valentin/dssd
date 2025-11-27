@@ -1,4 +1,5 @@
 import base64
+from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import inlineformset_factory
@@ -170,3 +171,73 @@ def llenar_datos_proceso(request):
     # GET: mostramos el formulario
     return render(request, "llenar_datos.html")
 """
+def finalizar_proyecto(request, pk):
+    proyecto = get_object_or_404(Proyecto, id=pk)
+
+    proyecto.estado = "finalizado"
+    proyecto.save()
+    
+     #logica bonita compromiso
+    print(f"TRAER TAREA 'Comienzo ejecucion'")
+    url_bonita = "http://localhost:8080/bonita"
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    bonita_user_id = request.session.get("bonita_user_id")
+
+    url_get_task = f"{url_bonita}/API/bpm/humanTask"
+
+    params = {
+        'p': 0,   # página
+        'c': 20,  # cantidad
+        'f': 'displayName=Comienzo ejecucion',
+    }
+
+    resp = requests.get(url_get_task, params=params, cookies=cookies, headers=headers, timeout=30)
+
+    print(f"RESPUESTA OBTENER TAREA: {resp.status_code}")
+    print(f"RESPUESTA OBTENER TAREA TEXTO: {resp.text}")
+    
+    if resp.status_code == 200:
+            tasks = resp.json()
+            if tasks:
+                task_id = tasks[0]["id"]
+                print(f"📌 ID de tarea encontrada en Bonita: {task_id}")
+
+                # 2️⃣ Asignar tarea al usuario
+                url_assign = f"{url_bonita}/API/bpm/userTask/{task_id}"
+                data_assign = {"assigned_id": bonita_user_id}
+
+                resp_assign = requests.put(url_assign, json=data_assign, cookies=cookies, headers=headers, timeout=30)
+                print(f"🔁 Respuesta asignar: {resp_assign.status_code} → {resp_assign.text}")
+
+                if resp_assign.status_code in (200, 204):
+                    # 3️⃣ Ejecutar tarea
+                    url_execute = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+                    payload = {"fin": True}  # variable que espera tu proceso — cámbiala si es otra
+
+                    resp_exec = requests.post(url_execute, json=payload, cookies=cookies, headers=headers, timeout=30)
+                    print(f"🚀 Respuesta ejecutar tarea: {resp_exec.status_code} → {resp_exec.text}")
+
+                    if resp_exec.status_code in (200, 204):
+                        messages.success(request,
+                            "Proyecto finalizado y proceso de Bonita avanzado correctamente."
+                        )
+                    else:
+                        messages.warning(request,
+                            "Proyecto finalizado, pero ocurrió un error al ejecutar la tarea en Bonita."
+                        )
+                else:
+                    messages.warning(request,
+                        "Proyecto finalizado, pero no se pudo asignar la tarea en Bonita."
+                    )
+            else:
+                print("⚠️ No hay tarea 'Comienzo ejecucion' disponible actualmente")
+                messages.warning(request,
+                    "Proyecto finalizado pero no hay tarea activa en Bonita para avanzar."
+                )
+    else:
+            messages.warning(request,
+                "Proyecto finalizado pero Bonita devolvió un error al obtener tareas."
+            )
+
+    return redirect('detalle_proyecto_seguimiento', pk)

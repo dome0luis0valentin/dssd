@@ -542,7 +542,6 @@ def cargar_etapas(request, proyecto_id):
 
             elif request.POST.get("action") == "guardar":
 
-
                 print(f"TRAER PROCESO")
 
                 url_get_process = f"{url_bonita}/API/bpm/process"
@@ -749,6 +748,7 @@ def cargar_etapas(request, proyecto_id):
         'form': form,
         'proyecto': proyecto,
     })
+    
 
 def consultar_datos_bonita(request):
     """
