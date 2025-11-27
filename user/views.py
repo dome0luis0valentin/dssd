@@ -31,7 +31,7 @@ def bonita_login(request, bonita_username, bonita_password):
     url = f"{url_bonita}/loginservice"
 
     # bonita_username = 'walter.bates'  # hardcoded for testing
-    #bonita_password = 'bpm'         # hardcoded for testing
+    bonita_password = 'admin'         # hardcoded for testing
     payload = {
         "username": bonita_username,
         "password": bonita_password,

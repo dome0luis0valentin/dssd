@@ -7,6 +7,162 @@ from user.wraps import session_required
 from user.utils import get_user_context
 from ONG.models import ONG
 
+import requests
+import json
+import time
+
+url_bonita = "http://localhost:8080/bonita"
+
+def bonita_find_process_id_by_name(process_name, request):
+    url_get_process = f"{url_bonita}/API/bpm/process"
+    # Parámetros correctos según la documentación de Bonita API
+    params = {
+        'p': 0,  # índice de página (requerido)
+        'c': 1,  # cantidad máxima de elementos (requerido)
+        'f': f'name={process_name}'  # filtro por nombre
+    }
+                
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    resp = requests.get(url_get_process, params=params, cookies=cookies, headers=headers, timeout=30)
+
+    print(f"RESPUESTA OBTENER PROCESO: {resp.status_code}")
+    print(f"RESPUESTA OBTENER PROCESO TEXTO: {resp.text}")
+    
+    if resp.status_code == 200:
+        processes = resp.json()
+        if processes:
+            # Tomar el primer proceso que coincida
+            proceso_bonita = processes[0]
+            process_definition_id = proceso_bonita['id']
+            print(f"ID del proceso encontrado: {process_definition_id}")
+            # Actualizar el process_id en la sesión si es necesario
+            request.session['process_id_crear_observacion'] = process_definition_id
+        else:
+            print(f"⚠️ No se encontró el proceso {process_name} 'Creacion de Observaciones' {resp.text}")
+    else:
+        print(f"❌ Error al obtener proceso: {resp.text}")
+
+def save_case_id(request, resp):
+    if resp.status_code == 200:
+        data = resp.json()
+        case_id = data.get("caseId")
+        print("Proceso iniciado, case_id:", case_id)
+        # Guardamos el case_id en la sesión o lo pasamos a la siguiente vista
+        request.session["case_id"] = case_id
+    else:
+        print("Error al iniciar proceso:", resp.status_code, resp.text)
+
+def bonita_init_process(process_name, request):
+    """
+    Inicializa un proceso en Bonita BPM.
+    Esta función es un placeholder y debe implementarse según la integración específica con Bonita.
+    """
+    bonita_find_process_id_by_name(process_name, request)
+    process_id = request.session['process_id_crear_observacion']
+    start_url = f"{url_bonita}/API/bpm/process/{process_id}/instantiation"
+    payload = {
+        "jwtTokenRender": request.session.get("jwt_token_render")
+    }
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+
+    resp = requests.post(start_url, json=payload, cookies=cookies, headers=headers, timeout=30)
+
+    if resp.status_code == 200:
+        save_case_id(request, resp)
+        print(f"Proceso '{process_name}' con id {process_id} iniciado en Bonita BPM.")
+    else:
+        print(f"❌ Error al iniciar proceso: {resp.text}")
+
+def ejecutar_tarea_bonita(task_id, task_data, cookies, headers, assign_to_current_user=True):
+    """
+    Ejecuta una tarea específica en Bonita con los datos proporcionados
+    """
+    print(f"🚀 Ejecutando tarea {task_id}")
+    
+    try:
+        # URL para ejecutar la tarea
+        execute_url = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+        
+        # Parámetros para asignar la tarea al usuario actual si es necesario
+        params = {}
+        if assign_to_current_user:
+            params['assign'] = 'true'
+        
+        print(f"📦 Datos a enviar a la tarea:")
+        print(json.dumps(task_data, indent=2))
+        
+        # Ejecutar la tarea con los datos del contrato
+        execute_resp = requests.post(
+            execute_url, 
+            json=task_data, 
+            params=params,
+            cookies=cookies, 
+            headers=headers, 
+            timeout=30
+        )
+        
+        print(f"🎯 Respuesta ejecución tarea:")
+        print(f"   Status Code: {execute_resp.status_code}")
+        print(f"   Response Text: {execute_resp.text}")
+        
+        if execute_resp.status_code == 204:
+            print("✅ Tarea ejecutada exitosamente")
+            return True
+        else:
+            print(f"⚠️ Error ejecutando tarea: {execute_resp.status_code}")
+            try:
+                error_data = execute_resp.json()
+                print(f"Error detalle: {json.dumps(error_data, indent=2)}")
+            except:
+                pass
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error ejecutando tarea: {e}")
+        return False
+
+def bonita_init_task(task_name, task_data, request):
+    """
+    Inicializa una tarea en Bonita BPM con los datos proporcionados.
+    """
+    case_id = request.session.get("case_id")
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    
+    if not case_id or not cookies or not headers:
+        print("❌ Error: Faltan datos de sesión (case_id, cookies o headers)")
+        return False
+    
+    # Buscar la tarea por nombre
+    from Stage.views import buscar_tarea_por_nombre
+    tareas_encontradas = buscar_tarea_por_nombre(case_id, task_name, cookies, headers)
+    
+    if not tareas_encontradas:
+        print(f"❌ No se encontró la tarea '{task_name}' en el caso {case_id}")
+        return False
+    
+    # Tomar la primera tarea encontrada
+    tarea = tareas_encontradas[0]
+    task_id = tarea.get('id')
+    
+    if not task_id:
+        print(f"❌ Error: La tarea encontrada no tiene ID válido")
+        return False
+    
+    print(f"✅ Tarea encontrada: {tarea.get('displayName')} (ID: {task_id})")
+    
+    # Ejecutar la tarea
+    resultado = ejecutar_tarea_bonita(task_id, task_data, cookies, headers)
+    
+    if resultado:
+        print(f"✅ Tarea '{task_name}' ejecutada exitosamente con datos: {task_data}")
+    else:
+        print(f"❌ Error ejecutando tarea '{task_name}'")
+    
+    return resultado
+
 def index(request):
     user_name = request.session.get("user_name")
     return render(request,'home.html',{"user_name": user_name})
@@ -481,9 +637,12 @@ def detalle_proyecto_gerencial(request, proyecto_id):
     
     return render(request, 'detalle_proyecto_gerencial.html', context)
 
+
+
 @session_required
 def crear_observacion(request, proyecto_id, etapa_id=None):
     """Crear una nueva observación para un proyecto o etapa específica"""
+    print("Iniciando creación de observación...")
     user_context = get_user_context(request)
     if not user_context:
         return redirect("login")
@@ -507,6 +666,49 @@ def crear_observacion(request, proyecto_id, etapa_id=None):
     
     if request.method == 'POST':
         descripcion = request.POST.get('descripcion', '').strip()
+
+        bonita_init_process('Ciclo de Observaciones', request)               
+        case_id = request.session.get("case_id")
+        cookies = request.session.get("cookies") 
+        headers = request.session.get("headers")
+        
+        if case_id:
+            print(f"🔍 Verificando tareas disponibles en caso {case_id} antes de ejecutar...")
+            from Stage.views import buscar_tarea_por_nombre, diagnosticar_proceso_bonita
+            
+            # Hacer diagnóstico completo del proceso
+            diagnosticar_proceso_bonita(case_id, cookies, headers)
+            
+            tareas_disponibles = buscar_tarea_por_nombre(case_id, "", cookies, headers)
+            print(f"📊 Total de tareas disponibles: {len(tareas_disponibles)}")
+
+        print(f"Session: {request.session.items()}")
+        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ3YWx0ZXIuYmF0ZXNAY29uc2Vqby5jb20iLCJleHAiOjE3NjQyMTQ1OTJ9.mnbjDqQZqHnQogC1k3dAH9wMDQV9QYqvLY45ydjhADg"
+        token = request.session.get("jwt_token_render")
+        data = {
+            "descripcion": descripcion,
+            "nombre_proyecto": proyecto.nombre,
+            "jwtTokenRender": token,
+            # "etapa_id": etapa.id if etapa else None,
+        }
+
+        # Intentar múltiples nombres posibles para la tarea
+        nombres_posibles = [
+            'Registrar Observacion',
+            'Registrar Observación',
+        ]
+        
+        tarea_ejecutada = False
+        for nombre_tarea in nombres_posibles:
+            if bonita_init_task(nombre_tarea, data, request):
+                tarea_ejecutada = True
+                print(f"✅ Tarea ejecutada exitosamente con nombre: '{nombre_tarea}'")
+                break
+            else:
+                print(f"⚠️ No se pudo ejecutar con nombre: '{nombre_tarea}'")
+        
+        if not tarea_ejecutada:
+            print("❌ No se pudo ejecutar ninguna tarea con los nombres intentados")
         
         if descripcion:
             from Observation.models import Observacion
@@ -835,7 +1037,8 @@ def marcar_observacion_resuelta(request, observacion_id):
         observacion = Observacion.objects.get(id=observacion_id)
         
         # Verificar permisos - solo ONGs originantes pueden marcar como resueltas las observaciones de sus proyectos
-        if role == 'ong_originante' and observacion.proyecto.originador == usuario.ong:
+        if role == 'ong_originante' and observacion.proyecto.originador == usuario.ong:    
+    
             observacion.marcar_como_resuelta()
             messages.success(request, f'Observación marcada como resuelta para el proyecto "{observacion.proyecto.nombre}"')
         else:

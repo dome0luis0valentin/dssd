@@ -105,36 +105,49 @@ def buscar_tarea_por_nombre(case_id, task_name, cookies, headers):
         tasks_params = {
             'p': 0,
             'c': 50,
-            'f': f'caseId={case_id}',  # Filtrar por caseId
-            's': task_name  # Buscar por nombre
+            'f': f'caseId={case_id}'  # Filtrar por caseId
         }
         
         tasks_resp = requests.get(tasks_url, params=tasks_params, cookies=cookies, headers=headers, timeout=15)
         
         if tasks_resp.status_code == 200:
             tasks_data = tasks_resp.json()
-            
+            print(f"📡 Respuesta API: status={tasks_resp.status_code}, tareas_encontradas={len(tasks_data)}")
+            print(f"📋 Tareas disponibles en caso {case_id}:")
+            for i, task in enumerate(tasks_data):
+                print(f"   {i+1}. {task.get('displayName')} (ID: {task.get('id')}, Estado: {task.get('state')})")
+
             # Filtrar por nombre exacto o que contenga el nombre buscado
             tareas_encontradas = []
-            for task in tasks_data:
-                task_display_name = task.get('displayName', '').lower()
-                task_internal_name = task.get('name', '').lower()
-                search_name = task_name.lower()
-                
-                if (search_name in task_display_name or 
-                    search_name in task_internal_name or
-                    task_display_name == search_name or
-                    task_internal_name == search_name):
-                    tareas_encontradas.append(task)
+            
+            # Si no se especifica nombre de tarea, devolver todas
+            if not task_name or task_name.strip() == "":
+                tareas_encontradas = tasks_data
+            else:
+                for task in tasks_data:
+                    task_display_name = task.get('displayName', '').lower()
+                    task_internal_name = task.get('name', '').lower()
+                    search_name = task_name.lower()
                     
-            print(f"📋 Tareas encontradas ({len(tareas_encontradas)}):")
-            for task in tareas_encontradas:
-                print(f"   - ID: {task.get('id')}")
-                print(f"     Nombre: {task.get('name')}")
-                print(f"     Display Name: {task.get('displayName')}")
-                print(f"     Estado: {task.get('state')}")
-                print(f"     Asignado a: {task.get('assigned_id', 'No asignado')}")
-                print(f"     ---")
+                    if (search_name in task_display_name or 
+                        search_name in task_internal_name or
+                        task_display_name == search_name or
+                        task_internal_name == search_name):
+                        tareas_encontradas.append(task)
+                    
+            if task_name and task_name.strip():
+                print(f"🎯 Tareas que coinciden con '{task_name}' ({len(tareas_encontradas)}):")
+            else:
+                print(f"📋 Todas las tareas disponibles ({len(tareas_encontradas)}):")
+                
+            for i, task in enumerate(tareas_encontradas):
+                print(f"   {i+1}. ID: {task.get('id')}")
+                print(f"       Nombre interno: '{task.get('name')}'")
+                print(f"       Nombre display: '{task.get('displayName')}'")
+                print(f"       Estado: {task.get('state')}")
+                print(f"       Asignado a: {task.get('assigned_id', 'No asignado')}")
+                if i < len(tareas_encontradas) - 1:
+                    print(f"       ---")
                 
             return tareas_encontradas
         else:
@@ -1075,3 +1088,84 @@ def verificar_tarea_ejecutada(request):
         'current_case_id': current_case_id,
         'proyectos': proyectos
     })
+
+def diagnosticar_proceso_bonita(case_id, cookies, headers):
+    """
+    Función de diagnóstico completo para un proceso de Bonita
+    """
+    print("🔧 === DIAGNÓSTICO COMPLETO DEL PROCESO ===")
+    
+    try:
+        # 1. Verificar información del caso
+        process_url = f"{url_bonita}/API/bpm/case/{case_id}"
+        proc_resp = requests.get(process_url, cookies=cookies, headers=headers, timeout=15)
+        
+        if proc_resp.status_code == 200:
+            proc_data = proc_resp.json()
+            print(f"✅ Información del caso {case_id}:")
+            print(f"   - Estado: {proc_data.get('state')}")
+            print(f"   - Proceso: {proc_data.get('processDefinitionId')}")
+            print(f"   - Iniciado: {proc_data.get('start')}")
+            print(f"   - Versión: {proc_data.get('version')}")
+        else:
+            print(f"❌ Error obteniendo información del caso: {proc_resp.status_code}")
+        
+        # 2. Listar TODAS las tareas (humanas y automáticas)
+        tasks_url = f"{url_bonita}/API/bpm/humanTask"
+        tasks_params = {'p': 0, 'c': 100, 'f': f'caseId={case_id}'}
+        tasks_resp = requests.get(tasks_url, params=tasks_params, cookies=cookies, headers=headers, timeout=15)
+        
+        print(f"\n📋 Tareas humanas disponibles:")
+        if tasks_resp.status_code == 200:
+            human_tasks = tasks_resp.json()
+            if human_tasks:
+                for i, task in enumerate(human_tasks):
+                    print(f"   {i+1}. '{task.get('displayName')}' (ID: {task.get('id')})")
+                    print(f"      - Nombre interno: '{task.get('name')}'")
+                    print(f"      - Estado: {task.get('state')}")
+                    print(f"      - Tipo: {task.get('type')}")
+                    print(f"      - Asignada a: {task.get('assigned_id', 'No asignada')}")
+            else:
+                print("   ⚠️ No hay tareas humanas disponibles")
+        else:
+            print(f"   ❌ Error obteniendo tareas humanas: {tasks_resp.status_code}")
+        
+        # 3. Verificar tareas automáticas/actividades
+        activities_url = f"{url_bonita}/API/bpm/activity"
+        activities_params = {'p': 0, 'c': 100, 'f': f'caseId={case_id}'}
+        activities_resp = requests.get(activities_url, params=activities_params, cookies=cookies, headers=headers, timeout=15)
+        
+        print(f"\n🤖 Actividades/Tareas automáticas:")
+        if activities_resp.status_code == 200:
+            activities = activities_resp.json()
+            if activities:
+                for i, activity in enumerate(activities):
+                    print(f"   {i+1}. '{activity.get('displayName')}' (ID: {activity.get('id')})")
+                    print(f"      - Nombre: '{activity.get('name')}'")
+                    print(f"      - Estado: {activity.get('state')}")
+                    print(f"      - Tipo: {activity.get('type')}")
+            else:
+                print("   ℹ️ No hay actividades automáticas")
+        else:
+            print(f"   ❌ Error obteniendo actividades: {activities_resp.status_code}")
+        
+        # 4. Verificar variables del proceso
+        variables_url = f"{url_bonita}/API/bpm/caseVariable"
+        var_params = {'p': 0, 'c': 20, 'f': f'case_id={case_id}'}
+        var_resp = requests.get(variables_url, params=var_params, cookies=cookies, headers=headers, timeout=15)
+        
+        print(f"\n📊 Variables del proceso:")
+        if var_resp.status_code == 200:
+            variables = var_resp.json()
+            if variables:
+                for var in variables:
+                    print(f"   - {var.get('name')}: {var.get('value')}")
+            else:
+                print("   ℹ️ No hay variables definidas")
+        else:
+            print(f"   ❌ Error obteniendo variables: {var_resp.status_code}")
+            
+    except Exception as e:
+        print(f"❌ Error en diagnóstico: {e}")
+    
+    print("🔧 === FIN DIAGNÓSTICO ===\n")
