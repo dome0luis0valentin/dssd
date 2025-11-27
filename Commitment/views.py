@@ -1,11 +1,16 @@
+from pyexpat.errors import messages
 from django.shortcuts import render, get_object_or_404, redirect
 from .models import Compromiso
 from .forms import CompromisoForm
 from CoverageRequest.models import PedidoCobertura
 from user.wraps import session_required
+from django.contrib import messages
+import urllib.parse
 from user.models import User
 from Stage.models import Etapa
+import requests
 from datetime import timedelta
+from bonita_utils import url_bonita
 from notifications.views import crear_notificacion
 from ONG.models import ONG   
 from Project.utils import actualizar_estado_proyecto_si_completo  # <-- nueva función
@@ -32,6 +37,105 @@ def postular_compromiso(request, pedido_id):
 
             compromiso.save()
 
+            #logica bonita compromiso
+            print(f"TRAER TAREA 'Postular Donacion'")
+
+            url_get_task = f"{url_bonita}/API/bpm/humanTask"
+
+            params = {
+                'p': 0,   # página
+                'c': 20,  # cantidad
+                'f': 'displayName=Postular Donacion',
+            }
+
+            cookies = request.session.get("cookies")
+            headers = request.session.get("headers")
+
+            resp = requests.get(url_get_task, params=params, cookies=cookies, headers=headers, timeout=30)
+
+            print(f"RESPUESTA OBTENER TAREA: {resp.status_code}")
+            print(f"RESPUESTA OBTENER TAREA TEXTO: {resp.text}")
+
+            if resp.status_code == 200:
+                tasks = resp.json()
+
+                if tasks:
+                    tarea = tasks[0]
+                    task_id = tarea["id"]
+                    print(f"ID de la tarea 'Postular Donacion' encontrada: {task_id}")
+
+                    # Guardar en sesión si querés usarla luego
+                    request.session['task_id_postular_donacion'] = task_id
+                else:
+                    print("⚠️ No se encontró la tarea 'Postular Donacion' (no está lista o no existe).")
+            else:
+                print(f"❌ Error al obtener tareas: {resp.text}")
+                
+            descripcion_encoded = urllib.parse.quote(
+                f"La ONG {ong_postulante.nombre} se compromete a cubrir el pedido {pedido.id} en las fechas indicadas."
+            )
+            proyecto_id_actual = request.session.get("proyecto_id_actual")
+
+            url_api_render = (
+                f"https://dssd-cloud-bpqf.onrender.com/proyectos/compromisos/"
+                f"?descripcion={descripcion_encoded}&proyecto_id={proyecto_id_actual}"
+            )
+
+            print(f"🌐 URL FINAL PARA BONITA: {url_api_render}")
+
+                
+            payload = {                    
+                    # HashMap simple para datos adicionales si es necesario
+                    "compromisoInput": {
+                        "tipo": compromiso.tipo, 
+                        "detalle": compromiso.detalle,
+                        "fecha_inicio": str(compromiso.fecha_inicio),
+                        "fecha_fin": str(compromiso.fecha_fin),
+                        "pedido": int(pedido.id),
+                        "responsable": int(ong_postulante.id),
+                    },
+                    "jwtTokenRender": request.session.get('jwt_token_render'),
+                    "descripsion": f"La ONG {ong_postulante.nombre} se compromete a cubrir el pedido {pedido.id} en las fechas indicadas.", 
+                    "proyecto_id": request.session.get("proyecto_id_actual"),
+                    "url_api_compromiso": str(url_api_render)
+            }
+
+            print("\n📦 PAYLOAD FINAL A BONITA:")
+            print(payload)
+            
+           # 2️⃣ Asignar la tarea al usuario actual (obligatorio en Bonita)
+            url_assign = f"{url_bonita}/API/bpm/humanTask/{task_id}"
+
+            assign_payload = {
+                "assigned_id": request.session.get("bonita_user_id")  # usuario BONITA logueado
+            }
+
+            resp_assign = requests.put(
+                url_assign,
+                json=assign_payload,
+                cookies=cookies,
+                headers=headers,
+                timeout=30
+            )
+
+            print(f"ASIGNACIÓN → {resp_assign.status_code} | {resp_assign.text}") 
+                        
+            # 3️⃣ Si se encontró la tarea → ejecutarla
+            if task_id:
+                url_execute = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+
+                resp_execute = requests.post(
+                    url_execute,
+                    json=payload,
+                    cookies=cookies,
+                    headers=headers,
+                    timeout=30
+                )
+
+                print(f"RESPUESTA EJECUCIÓN TAREA: {resp_execute.status_code}")
+                print(f"RESPUESTA TEXT EJECUCIÓN: {resp_execute.text}")
+
+            
             # 🔥 Notificar a todos los usuarios de la ONG propietaria del proyecto
             ong_origen = etapa.proyecto.originador  # ONG propietaria del proyecto
             usuarios_notificar = User.objects.filter(ong=ong_origen)
@@ -130,6 +234,64 @@ def aceptar_compromiso(request, id):
             pedido.save()
             # Comentario: eliminar otros compromisos parciales si hace falta
             # Compromiso.objects.filter(pedido=pedido).exclude(id=compromiso.id).delete()
+    
+    # 🔹 Si el pedido quedó completo, avanzar tarea en Bonita
+    if pedido.estado is True:
+        
+        cookies = request.session.get("cookies")
+        headers = request.session.get("headers")
+        bonita_user_id = request.session.get("bonita_user_id")
+        case_id = request.session.get('case_id') # asegúrate de tener el case_id de Bonita
+        
+        url_update_var = f"{url_bonita}/API/bpm/caseVariable/{case_id}/pedido_estado"
+        data = True  # el pedido está completo
+
+        resp_var = requests.put(url_update_var, json=data, cookies=cookies, headers=headers, timeout=30)
+        if resp_var.status_code in (200, 204):
+            print("✅ Variable 'pedido_estado' actualizada en Bonita")
+        else:
+            print(f"❌ Error actualizando variable en Bonita: {resp_var.text}")
+        
+        print("Pedido completado → avanzar tarea en Bonita")
+
+        url_get_task = f"{url_bonita}/API/bpm/humanTask"
+        params = {
+            'p': 0,
+            'c': 20,
+            'f': 'displayName=Seleccion de candidato',
+        }
+        
+        resp = requests.get(url_get_task, params=params, cookies=cookies, headers=headers, timeout=30)
+
+        if resp.status_code == 200:
+            tasks = resp.json()
+            if tasks:
+                task_id = tasks[0]["id"]
+                print(f"ID tarea encontrada: {task_id}")
+                
+                # 2️⃣ Asignar la tarea al usuario autenticado en Bonita
+                url_assign = f"{url_bonita}/API/bpm/userTask/{task_id}"
+                data_assign = {"assigned_id": bonita_user_id}
+                resp_assign = requests.put(url_assign, json=data_assign, cookies=cookies, headers=headers, timeout=30)
+
+                if resp_assign.status_code in (200, 204):
+                    print("🔹 Tarea asignada correctamente → ejecutando")
+
+                    # 3️⃣ Ejecutar la tarea para pasar a "Entrega de donaciones"
+                    url_execute = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+                    resp2 = requests.post(url_execute, cookies=cookies, headers=headers, timeout=30)
+
+                    if resp2.status_code == 204:
+                        print("🚀 La tarea 'Seleccion de candidato' fue completada en Bonita")
+                    else:
+                        print(f"⚠️ Error ejecutando tarea: {resp2.text}")
+                else:
+                    print(f"❌ Error asignando tarea: {resp_assign.text}")
+            else:
+                print("⚠️ No hay tarea 'Seleccion de candidato' disponible para avanzar")
+        else:
+            print(f"❌ Error obteniendo tareas: {resp.text}")
+
 
     # 🔹 Notificar a los usuarios de la ONG responsable
     for usuario in usuarios:
@@ -167,4 +329,70 @@ def rechazar_compromiso(request, id):
     # Eliminar compromiso rechazado
     compromiso.delete()
 
+    return redirect(request.META.get("HTTP_REFERER", "/"))
+
+
+@session_required
+def entregar_donaciones(request, compromiso_id):
+    compromiso = get_object_or_404(Compromiso, id=compromiso_id)
+
+    # 🔹 Marcar como entregado
+    compromiso.entregado = True
+    compromiso.save()
+    
+    #logica bonita compromiso
+    print(f"TRAER TAREA 'Postular Donacion'")
+
+    url_get_task = f"{url_bonita}/API/bpm/humanTask"
+
+    params = {
+    'p': 0,   # página
+    'c': 20,  # cantidad
+    'f': 'displayName=Entrega de donaciones',
+    }
+
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    bonita_user_id = request.session.get("bonita_user_id")
+
+    resp = requests.get(url_get_task, params=params, cookies=cookies, headers=headers, timeout=30)
+
+    print(f"RESPUESTA OBTENER TAREA: {resp.status_code}")
+    print(f"RESPUESTA OBTENER TAREA TEXTO: {resp.text}")
+
+    if resp.status_code == 200:
+        tasks = resp.json()
+        if tasks:
+            task_id = tasks[0]["id"]
+            print(f"ID tarea encontrada: {task_id}")
+
+            # 1️⃣ Asignar la tarea al usuario actual
+            url_assign = f"{url_bonita}/API/bpm/userTask/{task_id}"
+            data_assign = {"assigned_id": bonita_user_id}
+            resp_assign = requests.put(url_assign, json=data_assign, cookies=cookies, headers=headers, timeout=30)
+
+            if resp_assign.status_code in (200, 204):
+                print("🔹 Tarea asignada correctamente → ejecutando")
+
+                # 2️⃣ Ejecutar la tarea
+                url_execute = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+                resp_execute = requests.post(url_execute, cookies=cookies, headers=headers, timeout=30)
+
+                if resp_execute.status_code in (200, 204):
+                    print("🚀 La tarea 'Entrega de donaciones' fue completada en Bonita")
+                    messages.success(request, "Compromiso entregado y tarea 'Entrega de donaciones' completada en Bonita.")
+                else:
+                    print(f"⚠️ Error ejecutando tarea: {resp_execute.text}")
+                    messages.warning(request, "Compromiso entregado, pero error ejecutando la tarea en Bonita.")
+            else:
+                print(f"❌ Error asignando tarea: {resp_assign.text}")
+                messages.warning(request, "Compromiso entregado, pero error asignando la tarea en Bonita.")
+        else:
+            print("⚠️ No hay tarea 'Entrega de donaciones' disponible para avanzar")
+            messages.warning(request, "Compromiso entregado, pero no se encontró tarea 'Entrega de donaciones' en Bonita.")
+    else:
+        print(f"❌ Error obteniendo tareas: {resp.text}")
+        messages.error(request, "Compromiso entregado, pero fallo la conexión con Bonita.")
+
+    # 🔹 Volver a la página anterior
     return redirect(request.META.get("HTTP_REFERER", "/"))

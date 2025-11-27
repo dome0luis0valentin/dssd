@@ -13,6 +13,9 @@ class Compromiso(models.Model):
     detalle = models.TextField()
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(null=True, blank=True)  # opcional si aún no termina
+
+    entregado = models.BooleanField(default=False)
+
     
     # Relación One-to-Many: un compromiso pertenece a un pedido de cobertura
     pedido = models.ForeignKey(PedidoCobertura, on_delete=models.CASCADE, related_name='compromisos')

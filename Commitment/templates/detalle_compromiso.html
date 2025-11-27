@@ -19,6 +19,16 @@
         <strong>Fecha de fin:</strong> {{ compromiso.fecha_fin|default:"Sin definir" }}
     </p>
 
+    <button class="btn btn-sm btn-primary"
+            onclick="window.location.href='{% url 'entregar_donaciones' compromiso.id %}'"
+            {% if compromiso.entregado %}disabled{% endif %}>
+        {% if compromiso.entregado %}
+            ✔ Donación entregada
+        {% else %}
+            Entregar Donaciones
+        {% endif %}
+    </button>
+
     <a href="{{ request.META.HTTP_REFERER }}" class="btn btn-outline-secondary mt-3">
         <i class="bi bi-arrow-left"></i> Volver
     </a>

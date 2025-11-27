@@ -7,5 +7,5 @@ urlpatterns = [
     path('compromiso/<int:compromiso_id>/', views.detalle_compromiso, name='detalle_compromiso'),
     path('compromisos/<int:id>/aceptar/', views.aceptar_compromiso, name='aceptar_compromiso'),
     path('compromisos/<int:id>/rechazar/', views.rechazar_compromiso, name='rechazar_compromiso'),
-
+    path('compromisos/<int:compromiso_id>/entregar/', views.entregar_donaciones, name='entregar_donaciones'),
 ]

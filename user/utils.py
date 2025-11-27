@@ -59,6 +59,7 @@ def get_user_permissions(user):
             'can_view_all_projects': True,
             'can_participate_projects': True,
             'can_manage_commitments': True,
+            'can_create_projects': True,
         })
     
     return permissions

@@ -70,7 +70,7 @@ def crear_proyecto(request):
             proyecto.originador = user.ong
             proyecto.estado = "Proceso"
             proyecto.save()
-
+            
             return redirect("cargar_etapas", proyecto_id=proyecto.id)
 
     else:
@@ -81,6 +81,8 @@ def crear_proyecto(request):
 @session_required
 def etapas_proyecto(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    
+    request.session["proyecto_id_actual"] = proyecto.id
 
     # 🔹 Traer SOLO las etapas cuyo pedido de cobertura NO esté completo
     etapas = (

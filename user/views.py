@@ -31,7 +31,7 @@ def bonita_login(request, bonita_username, bonita_password):
     url = f"{url_bonita}/loginservice"
 
     # bonita_username = 'walter.bates'  # hardcoded for testing
-    bonita_password = 'bpm'         # hardcoded for testing
+    #bonita_password = 'bpm'         # hardcoded for testing
     payload = {
         "username": bonita_username,
         "password": bonita_password,
@@ -47,7 +47,18 @@ def bonita_login(request, bonita_username, bonita_password):
             "X-Bonita-API-Token": session.cookies.get("X-Bonita-API-Token")
         }
         request.session["username_bonita"] = bonita_username
+        
         print("Login exitoso")
+        # 🔥 AHORA OBTENEMOS EL USER ID REAL DE BONITA
+        session_info_url = f"{url_bonita}/API/system/session/1"
+        resp_info = session.get(session_info_url, cookies=session.cookies)
+
+        if resp_info.status_code == 200:
+            bonita_user = resp_info.json()
+            request.session["bonita_user_id"] = bonita_user["user_id"]
+            print(f"Bonita user ID obtenido: {bonita_user['user_id']}")
+        else:
+            print("⚠️ No pude obtener el user_id de Bonita")
         return session
     else:
         raise Exception("Error al loguearse en Bonita", response.text, response.status_code, response)

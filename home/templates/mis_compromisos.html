@@ -49,7 +49,10 @@
                     {% if not compromiso.pedido.estado %}
                     <button class="btn btn-sm btn-success">Marcar como Completado</button>
                     {% endif %}
-                    <button class="btn btn-sm btn-outline-info">Ver Detalles</button>
+                    <button class="btn btn-sm btn-outline-info"
+                            onclick="window.location.href='{% url 'detalle_compromiso' compromiso.id %}'">
+                        Ver Detalles
+                    </button>                  
                 </div>
             </div>
         </div>
