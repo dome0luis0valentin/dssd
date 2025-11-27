@@ -1,25 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
-  <h2>{{ proyecto.nombre }}</h2>
-  <p>{{ proyecto.descripcion }}</p>
-  <p><b>Estado:</b> {{ proyecto.get_estado_display }}</p>
-  <p><b>ONG Originadora:</b> {{ proyecto.originador.nombre }}</p>
+  <!-- Información del Proyecto - Card compacto -->
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h4 class="mb-0">{{ proyecto.nombre }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-8">
+          <p class="mb-2">{{ proyecto.descripcion }}</p>
+        </div>
+        <div class="col-md-4">
+          <small class="text-muted">Estado:</small><br>
+          <span class="badge badge-info">{{ proyecto.get_estado_display }}</span><br><br>
+          <small class="text-muted">ONG Originadora:</small><br>
+          <strong>{{ proyecto.originador.nombre }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <h3 class="mt-4">Etapas</h3>
-  {% if etapas %}
-    <ul class="list-group">
-      {% for etapa in etapas %}
-        <li class="list-group-item">
-          <b>{{ etapa.nombre }}</b>  
-          ({{ etapa.fecha_inicio }} → {{ etapa.fecha_fin|default:"En curso" }})  
-          <br>
-          Pedido de Cobertura: {{ etapa.pedido.tipo_cobertura.nombre }}
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No hay etapas cargadas.</p>
-  {% endif %}
+  <!-- Etapas - Diseño compacto en tabla -->
+  <div class="card">
+    <div class="card-header bg-secondary text-white">
+      <h5 class="mb-0">Etapas del Proyecto</h5>
+    </div>
+    <div class="card-body p-0">
+      {% if etapas %}
+        <div class="table-responsive">
+          <table class="table table-striped table-hover mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th style="width: 30%;">Etapa</th>
+                <th style="width: 20%;">Inicio</th>
+                <th style="width: 20%;">Fin</th>
+                <th style="width: 30%;">Cobertura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for etapa in etapas %}
+                <tr>
+                  <td>
+                    <strong>{{ etapa.nombre }}</strong>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ etapa.fecha_inicio|date:"d/m/Y" }}</small>
+                  </td>
+                  <td>
+                    {% if etapa.fecha_fin %}
+                      <small class="text-success">{{ etapa.fecha_fin|date:"d/m/Y" }}</small>
+                    {% else %}
+                      <span class="badge badge-warning badge-sm">En curso</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small>{{ etapa.pedido.tipo_cobertura.nombre }}</small>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="text-center py-4">
+          <div class="text-muted">
+            <i class="fas fa-tasks fa-3x mb-3"></i>
+            <p>No hay etapas cargadas para este proyecto.</p>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -8,14 +8,18 @@ class EtapaForm(forms.ModelForm):
         queryset=TipoCobertura.objects.all(),
         required=False,
         label="Tipo de cobertura existente",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'placeholder': 'Seleccione un tipo de cobertura'
+        }),
+        empty_label="-- Seleccione una opción --"
     )
     nuevo_tipo_cobertura = forms.CharField(
         required=False,
         label="Nuevo tipo de cobertura",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Escriba un nuevo tipo de cobertura si no está en la lista',
+            'placeholder': 'Ej: Asistencia médica, Educación, Alimentación...',
         })
     )
 
@@ -23,10 +27,23 @@ class EtapaForm(forms.ModelForm):
         model = Etapa
         fields = ['nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'tipo_cobertura', 'nuevo_tipo_cobertura']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'fecha_inicio': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'fecha_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ingrese el nombre de la etapa'
+            }),
+            'descripcion': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 4,
+                'placeholder': 'Describa los objetivos y actividades de esta etapa'
+            }),
+            'fecha_inicio': forms.DateInput(attrs={
+                'type': 'date', 
+                'class': 'form-control'
+            }),
+            'fecha_fin': forms.DateInput(attrs={
+                'type': 'date', 
+                'class': 'form-control'
+            }),
         }
 
     def save(self, commit=True, proyecto=None):

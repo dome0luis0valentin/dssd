@@ -1,77 +1,191 @@
-<!-- templates/etapas/cargar_etapas.html -->
 {% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Cargar Etapa para el Proyecto: {{ proyecto.nombre }}</h2>
-
-    <form method="POST">
-        {% csrf_token %}
-
-        <!-- Nombre -->
-        <div class="mb-3">
-            {{ form.nombre.label_tag }}
-            {{ form.nombre }}
-            {% if form.nombre.errors %}
-                <div class="text-danger">{{ form.nombre.errors }}</div>
-            {% endif %}
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Cargar Etapa para el Proyecto: {{ proyecto.nombre }}</h4>
         </div>
+        <div class="card-body">
+          <form method="POST">
+            {% csrf_token %}
 
-        <!-- Descripción -->
-        <div class="mb-3">
-            {{ form.descripcion.label_tag }}
-            {{ form.descripcion }}
-            {% if form.descripcion.errors %}
-                <div class="text-danger">{{ form.descripcion.errors }}</div>
-            {% endif %}
+            <div class="row">
+              <!-- Columna izquierda -->
+              <div class="col-md-6">
+                <!-- Nombre -->
+                <div class="mb-3">
+                  <label for="{{ form.nombre.id_for_label }}" class="form-label fw-bold">Nombre de la Etapa</label>
+                  {{ form.nombre }}
+                  {% if form.nombre.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.nombre.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Fecha inicio -->
+                <div class="mb-3">
+                  <label for="{{ form.fecha_inicio.id_for_label }}" class="form-label fw-bold">Fecha de Inicio</label>
+                  {{ form.fecha_inicio }}
+                  {% if form.fecha_inicio.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.fecha_inicio.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Fecha fin -->
+                <div class="mb-3">
+                  <label for="{{ form.fecha_fin.id_for_label }}" class="form-label fw-bold">Fecha de Fin</label>
+                  {{ form.fecha_fin }}
+                  <div class="form-text">Opcional - Dejar vacío si la etapa está en curso</div>
+                  {% if form.fecha_fin.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.fecha_fin.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Columna derecha -->
+              <div class="col-md-6">
+                <!-- Descripción -->
+                <div class="mb-3">
+                  <label for="{{ form.descripcion.id_for_label }}" class="form-label fw-bold">Descripción</label>
+                  {{ form.descripcion }}
+                  {% if form.descripcion.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.descripcion.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Tipo de cobertura existente -->
+                <div class="mb-3">
+                  <label for="{{ form.tipo_cobertura.id_for_label }}" class="form-label fw-bold">Tipo de Cobertura Existente</label>
+                  {{ form.tipo_cobertura }}
+                  {% if form.tipo_cobertura.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.tipo_cobertura.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+
+                <!-- Nuevo tipo de cobertura -->
+                <div class="mb-3">
+                  <label for="{{ form.nuevo_tipo_cobertura.id_for_label }}" class="form-label fw-bold">Nuevo Tipo de Cobertura</label>
+                  {{ form.nuevo_tipo_cobertura }}
+                  <div class="form-text">Escriba un nuevo tipo de cobertura si no está en la lista</div>
+                  {% if form.nuevo_tipo_cobertura.errors %}
+                    <div class="invalid-feedback d-block">
+                      {% for error in form.nuevo_tipo_cobertura.errors %}{{ error }}{% endfor %}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="row mt-4">
+              <div class="col-md-6">
+                <div class="d-grid">
+                  <button type="submit" name="action" value="agregar" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus me-2"></i>Agregar otra etapa
+                  </button>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="d-grid">
+                  <button type="submit" name="action" value="guardar" class="btn btn-success btn-lg">
+                    <i class="fas fa-save me-2"></i>Guardar proyecto
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </form>
         </div>
-
-        <!-- Fecha inicio -->
-        <div class="mb-3">
-            {{ form.fecha_inicio.label_tag }}
-            {{ form.fecha_inicio }}
-            {% if form.fecha_inicio.errors %}
-                <div class="text-danger">{{ form.fecha_inicio.errors }}</div>
-            {% endif %}
+        <div class="card-footer text-muted text-center">
+          <small>Complete los datos de la etapa para continuar</small>
         </div>
-
-        <!-- Fecha fin -->
-        <div class="mb-3">
-            {{ form.fecha_fin.label_tag }}
-            {{ form.fecha_fin }}
-            {% if form.fecha_fin.errors %}
-                <div class="text-danger">{{ form.fecha_fin.errors }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Tipo de cobertura existente -->
-        <div class="mb-3">
-            {{ form.tipo_cobertura.label_tag }}
-            {{ form.tipo_cobertura }}
-            {% if form.tipo_cobertura.errors %}
-                <div class="text-danger">{{ form.tipo_cobertura.errors }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Nuevo tipo de cobertura -->
-        <div class="mb-3">
-            {{ form.nuevo_tipo_cobertura.label_tag }}
-            {{ form.nuevo_tipo_cobertura }}
-            {% if form.nuevo_tipo_cobertura.errors %}
-                <div class="text-danger">{{ form.nuevo_tipo_cobertura.errors }}</div>
-            {% endif %}
-        </div>
-
-        <!-- Botones -->
-        <div class="mb-3">
-            <button type="submit" name="action" value="agregar" class="btn btn-primary">
-                Agregar otra etapa
-            </button>
-            <button type="submit" name="action" value="guardar" class="btn btn-success">
-                Guardar proyecto
-            </button>
-        </div>
-
-    </form>
+      </div>
+    </div>
+  </div>
 </div>
+
+<style>
+/* Estilos consistentes para el formulario de etapas */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-control {
+    border-radius: 0.375rem;
+    border: 1px solid #ced4da;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
+    outline: 0;
+}
+
+.form-control::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Campos de fecha más compactos */
+input[type="date"] {
+    max-width: 180px;
+}
+
+/* Textarea específico */
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Mensajes de error */
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875rem;
+}
+
+/* Espaciado mejorado */
+.card-body {
+    padding: 2rem;
+}
+
+/* Botones mejorados */
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    font-weight: 600;
+}
+
+.btn-success {
+    background-color: #198754;
+    border-color: #198754;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.btn-success:hover {
+    background-color: #157347;
+    border-color: #146c43;
+}
+</style>
 {% endblock %}
