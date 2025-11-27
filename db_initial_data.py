@@ -1,20 +1,44 @@
 import os
 import django
+import sys
+from datetime import date
+
+# === Inicializar Django ===
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dssd.settings')
 django.setup()
 
+# === Imports de modelos ===
 from ONG.models import ONG
 from user.models import User
 from BoardOfDirectors.models import ConsejoDirectivo
+from Project.models import Proyecto
+from TypeCoverage.models import TipoCobertura
+from CoverageRequest.models import PedidoCobertura
+from Stage.models import Etapa
+from Observation.models import Observacion  # si tu app se llama distinto, decime
 
-# --- BORRAR DATOS EXISTENTES ---
+
+# ============================
+# BORRAR DATOS ANTERIORES
+# ============================
+Observacion.objects.all().delete()
+Etapa.objects.all().delete()
+PedidoCobertura.objects.all().delete()
+Proyecto.objects.all().delete()
+TipoCobertura.objects.all().delete()
 ONG.objects.all().delete()
 User.objects.all().delete()
 ConsejoDirectivo.objects.all().delete()
+
 print("Datos anteriores eliminados.")
 
-# --- CREAR 5 ONGs con 2 usuarios cada una ---
+
+# ============================
+# CREAR ONGs + USUARIOS
+# ============================
 usuarios_ong = [
     ("Isabel", "Bissale", "isabel.bissale"),
     ("Jan", "Fisher", "jan.fisher"),
@@ -28,24 +52,32 @@ usuarios_ong = [
     ("Lucia", "Ramirez", "lucia.ramirez")
 ]
 
+ong_objects = []
+
 for i in range(5):
     ong = ONG.objects.create(nombre=f"ONG{i+1}")
+    ong_objects.append(ong)
+
     for j in range(2):
         idx = i * 2 + j
         nombre, apellido, username = usuarios_ong[idx]
-        usuario = User.objects.create(
+
+        user = User.objects.create(
             nombre=nombre,
             apellido=apellido,
-            edad=28 + idx,
+            edad=25 + idx,
             email=f"{username}@correo.com",
             username=username,
             ong=ong
         )
-        usuario.set_password("admin")
-        usuario.save()
-    print(f"ONG creada: {ong.nombre} con usuarios {usuarios_ong[i*2][0]} y {usuarios_ong[i*2+1][0]}")
+        user.set_password("admin")
+        user.save()
 
-# --- CREAR Consejo Directivo con 3 usuarios únicos ---
+    print(f"ONG creada: {ong.nombre}")
+
+# ============================
+# CONSEJO DIRECTIVO
+# ============================
 consejo = ConsejoDirectivo.objects.create(nombre="Consejo Directivo Principal")
 
 miembros_cd = [
@@ -54,9 +86,8 @@ miembros_cd = [
     ("Giovanna", "Almeida", "giovanna.almeida")
 ]
 
-miembros = []
 for i, (nombre, apellido, username) in enumerate(miembros_cd):
-    user = User.objects.create(
+    u = User.objects.create(
         nombre=nombre,
         apellido=apellido,
         edad=35 + i,
@@ -64,9 +95,95 @@ for i, (nombre, apellido, username) in enumerate(miembros_cd):
         username=username,
         consejo=consejo
     )
-    user.set_password("admin")
-    user.save()
-    miembros.append(user)
+    u.set_password("admin")
+    u.save()
 
-print(f"Consejo Directivo creado: {consejo.nombre} con miembros {', '.join([m.username for m in miembros])}")
+print("Consejo Directivo creado.")
+
+
+# ============================
+# TIPOS DE COBERTURA
+# ============================
+tipo1 = TipoCobertura.objects.create(nombre="Salud")
+tipo2 = TipoCobertura.objects.create(nombre="Educación")
+
+print("Tipos de cobertura creados.")
+
+
+# ============================
+# PROYECTOS
+# ============================
+ong1, ong2 = ong_objects[0], ong_objects[1]
+
+proy1 = Proyecto.objects.create(
+    nombre="Proyecto Agua Limpia",
+    descripcion="Brindar acceso a agua potable",
+    estado="proceso",
+    originador=ong1
+)
+
+proy2 = Proyecto.objects.create(
+    nombre="Proyecto Escuelas Verdes",
+    descripcion="Mejorar la infraestructura escolar",
+    estado="ejecucion",
+    originador=ong2
+)
+
+print("Proyectos creados.")
+
+
+# ============================
+# PEDIDOS DE COBERTURA
+# ============================
+pedido1 = PedidoCobertura.objects.create(
+    estado=False,
+    tipo_cobertura=tipo1
+)
+
+pedido2 = PedidoCobertura.objects.create(
+    estado=True,
+    tipo_cobertura=tipo2
+)
+
+print("Pedidos de cobertura creados.")
+
+
+# ============================
+# ETAPAS
+# ============================
+Etapa.objects.create(
+    proyecto=proy1,
+    nombre="Diagnóstico",
+    descripcion="Evaluación de necesidades",
+    fecha_inicio=date(2025, 1, 10),
+    pedido=pedido1
+)
+
+Etapa.objects.create(
+    proyecto=proy2,
+    nombre="Ejecución",
+    descripcion="Implementación de actividades",
+    fecha_inicio=date(2025, 2, 15),
+    pedido=pedido2
+)
+
+print("Etapas creadas.")
+
+
+# ============================
+# OBSERVACIONES
+# ============================
+Observacion.objects.create(
+    descripcion="Buen progreso inicial",
+    proyecto=proy1,
+    consejo=consejo
+)
+
+Observacion.objects.create(
+    descripcion="Requiere más voluntarios",
+    proyecto=proy2,
+    consejo=consejo
+)
+
+print("Observaciones creadas.")
 print("✅ Datos iniciales cargados correctamente.")
