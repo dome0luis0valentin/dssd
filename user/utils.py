@@ -155,13 +155,13 @@ def get_navigation_menu(user):
             'active': False
         })
     
-    if permissions['can_view_dashboard']:
-        safe_add_menu_item(menu_items, {
-            'label': 'Dashboard Gerencial',
-            'url': 'dashboard_gerencial',
-            'icon': 'bi-graph-up',
-            'active': False
-        })
+    # if permissions['can_view_dashboard']:
+    #     safe_add_menu_item(menu_items, {
+    #         'label': 'Dashboard Gerencial',
+    #         'url': 'dashboard_gerencial',
+    #         'icon': 'bi-graph-up',
+    #         'active': False
+    #     })
     
     # if permissions['can_view_reports']:
     safe_add_menu_item(menu_items, {

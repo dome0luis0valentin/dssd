@@ -305,7 +305,9 @@ def procesar_tarea_creacion_proyecto(case_id, proyecto, cookies, headers, reques
         "jwtTokenRender": jwt_token,
         
         # Nombre de la tarea (campo obligatorio del contrato)
-        "nameTask": str(proyecto.nombre)
+        "nameTask": str(proyecto.nombre),
+
+        "etapas": [etapa.nombre for etapa in proyecto.etapas.all()]
     }
     
     print(f"📦 Datos preparados para el contrato:")
@@ -619,7 +621,11 @@ def cargar_etapas(request, proyecto_id):
                         "estado": str(proyecto.estado),       
                         "originador": str(proyecto.originador.id)  # String según BDM
                     },
-                    "name": str(proyecto.nombre),  
+                    "name": str(proyecto.nombre),
+                    
+                    "etapas": [
+                        etapa.nombre for etapa in proyecto.etapas.all()
+                    ]
                 }
 
                 try:
