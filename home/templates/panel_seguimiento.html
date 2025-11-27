@@ -60,6 +60,12 @@
                                             <span class="badge bg-warning text-dark">
                                                 <i class="bi bi-play-circle"></i> En ejecución
                                             </span>
+                                            <!-- Botón Finalizar Proyecto -->
+                                            <a href="{% url 'finalizar_proyecto' proyecto_info.proyecto.id %}" 
+                                            class="btn btn-sm btn-success"
+                                            onclick="return confirm('¿Está seguro de finalizar este proyecto? Esta acción no se puede deshacer.');">
+                                                <i class="bi bi-check2-circle"></i> Finalizar
+                                            </a>
                                         {% elif proyecto_info.proyecto.estado == 'finalizado' %}
                                             <span class="badge bg-success">
                                                 <i class="bi bi-check-circle"></i> Finalizado
