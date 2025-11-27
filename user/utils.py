@@ -163,13 +163,13 @@ def get_navigation_menu(user):
             'active': False
         })
     
-    if permissions['can_view_reports']:
-        safe_add_menu_item(menu_items, {
-            'label': 'Reportes',
-            'url': 'reportes',
-            'icon': 'bi-file-earmark-text',
-            'active': False
-        })
+    # if permissions['can_view_reports']:
+    safe_add_menu_item(menu_items, {
+        'label': 'Reportes',
+        'url': 'reportes',
+        'icon': 'bi-file-earmark-text',
+        'active': False
+    })
     
     return menu_items
 
