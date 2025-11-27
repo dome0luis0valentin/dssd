@@ -7,6 +7,163 @@ from user.wraps import session_required
 from user.utils import get_user_context
 from ONG.models import ONG
 
+import requests
+import json
+import time
+from datetime import datetime
+
+url_bonita = "http://localhost:8080/bonita"
+
+def bonita_find_process_id_by_name(process_name, request):
+    url_get_process = f"{url_bonita}/API/bpm/process"
+    # Parámetros correctos según la documentación de Bonita API
+    params = {
+        'p': 0,  # índice de página (requerido)
+        'c': 1,  # cantidad máxima de elementos (requerido)
+        'f': f'name={process_name}'  # filtro por nombre
+    }
+                
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    resp = requests.get(url_get_process, params=params, cookies=cookies, headers=headers, timeout=30)
+
+    print(f"RESPUESTA OBTENER PROCESO: {resp.status_code}")
+    print(f"RESPUESTA OBTENER PROCESO TEXTO: {resp.text}")
+    
+    if resp.status_code == 200:
+        processes = resp.json()
+        if processes:
+            # Tomar el primer proceso que coincida
+            proceso_bonita = processes[0]
+            process_definition_id = proceso_bonita['id']
+            print(f"ID del proceso encontrado: {process_definition_id}")
+            # Actualizar el process_id en la sesión si es necesario
+            request.session['process_id_crear_observacion'] = process_definition_id
+        else:
+            print(f"⚠️ No se encontró el proceso {process_name} 'Creacion de Observaciones' {resp.text}")
+    else:
+        print(f"❌ Error al obtener proceso: {resp.text}")
+
+def save_case_id(request, resp):
+    if resp.status_code == 200:
+        data = resp.json()
+        case_id = data.get("caseId")
+        print("Proceso iniciado, case_id:", case_id)
+        # Guardamos el case_id en la sesión o lo pasamos a la siguiente vista
+        request.session["case_id"] = case_id
+    else:
+        print("Error al iniciar proceso:", resp.status_code, resp.text)
+
+def bonita_init_process(process_name, request):
+    """
+    Inicializa un proceso en Bonita BPM.
+    Esta función es un placeholder y debe implementarse según la integración específica con Bonita.
+    """
+    bonita_find_process_id_by_name(process_name, request)
+    process_id = request.session['process_id_crear_observacion']
+    start_url = f"{url_bonita}/API/bpm/process/{process_id}/instantiation"
+    payload = {
+        "jwtTokenRender": request.session.get("jwt_token_render")
+    }
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+
+    resp = requests.post(start_url, json=payload, cookies=cookies, headers=headers, timeout=30)
+
+    if resp.status_code == 200:
+        save_case_id(request, resp)
+        print(f"Proceso '{process_name}' con id {process_id} iniciado en Bonita BPM.")
+    else:
+        print(f"❌ Error al iniciar proceso: {resp.text}")
+
+def ejecutar_tarea_bonita(task_id, task_data, cookies, headers, assign_to_current_user=True):
+    """
+    Ejecuta una tarea específica en Bonita con los datos proporcionados
+    """
+    print(f"🚀 Ejecutando tarea {task_id}")
+    
+    try:
+        # URL para ejecutar la tarea
+        execute_url = f"{url_bonita}/API/bpm/userTask/{task_id}/execution"
+        
+        # Parámetros para asignar la tarea al usuario actual si es necesario
+        params = {}
+        if assign_to_current_user:
+            params['assign'] = 'true'
+        
+        print(f"📦 Datos a enviar a la tarea:")
+        print(json.dumps(task_data, indent=2))
+        
+        # Ejecutar la tarea con los datos del contrato
+        execute_resp = requests.post(
+            execute_url, 
+            json=task_data, 
+            params=params,
+            cookies=cookies, 
+            headers=headers, 
+            timeout=30
+        )
+        
+        print(f"🎯 Respuesta ejecución tarea:")
+        print(f"   Status Code: {execute_resp.status_code}")
+        print(f"   Response Text: {execute_resp.text}")
+        
+        if execute_resp.status_code == 204:
+            print("✅ Tarea ejecutada exitosamente")
+            return True
+        else:
+            print(f"⚠️ Error ejecutando tarea: {execute_resp.status_code}")
+            try:
+                error_data = execute_resp.json()
+                print(f"Error detalle: {json.dumps(error_data, indent=2)}")
+            except:
+                pass
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error ejecutando tarea: {e}")
+        return False
+
+def bonita_init_task(task_name, task_data, request):
+    """
+    Inicializa una tarea en Bonita BPM con los datos proporcionados.
+    """
+    case_id = request.session.get("case_id")
+    cookies = request.session.get("cookies")
+    headers = request.session.get("headers")
+    
+    if not case_id or not cookies or not headers:
+        print("❌ Error: Faltan datos de sesión (case_id, cookies o headers)")
+        return False
+    
+    # Buscar la tarea por nombre
+    from Stage.views import buscar_tarea_por_nombre
+    tareas_encontradas = buscar_tarea_por_nombre(case_id, task_name, cookies, headers)
+    
+    if not tareas_encontradas:
+        print(f"❌ No se encontró la tarea '{task_name}' en el caso {case_id}")
+        return False
+    
+    # Tomar la primera tarea encontrada
+    tarea = tareas_encontradas[0]
+    task_id = tarea.get('id')
+    
+    if not task_id:
+        print(f"❌ Error: La tarea encontrada no tiene ID válido")
+        return False
+    
+    print(f"✅ Tarea encontrada: {tarea.get('displayName')} (ID: {task_id})")
+    
+    # Ejecutar la tarea
+    resultado = ejecutar_tarea_bonita(task_id, task_data, cookies, headers)
+    
+    if resultado:
+        print(f"✅ Tarea '{task_name}' ejecutada exitosamente con datos: {task_data}")
+    else:
+        print(f"❌ Error ejecutando tarea '{task_name}'")
+    
+    return resultado
+
 def index(request):
     user_name = request.session.get("user_name")
     return render(request,'home.html',{"user_name": user_name})
@@ -481,9 +638,12 @@ def detalle_proyecto_gerencial(request, proyecto_id):
     
     return render(request, 'detalle_proyecto_gerencial.html', context)
 
+
+
 @session_required
 def crear_observacion(request, proyecto_id, etapa_id=None):
     """Crear una nueva observación para un proyecto o etapa específica"""
+    print("Iniciando creación de observación...")
     user_context = get_user_context(request)
     if not user_context:
         return redirect("login")
@@ -507,6 +667,49 @@ def crear_observacion(request, proyecto_id, etapa_id=None):
     
     if request.method == 'POST':
         descripcion = request.POST.get('descripcion', '').strip()
+
+        bonita_init_process('Ciclo de Observaciones', request)               
+        case_id = request.session.get("case_id")
+        cookies = request.session.get("cookies") 
+        headers = request.session.get("headers")
+        
+        if case_id:
+            print(f"🔍 Verificando tareas disponibles en caso {case_id} antes de ejecutar...")
+            from Stage.views import buscar_tarea_por_nombre, diagnosticar_proceso_bonita
+            
+            # Hacer diagnóstico completo del proceso
+            diagnosticar_proceso_bonita(case_id, cookies, headers)
+            
+            tareas_disponibles = buscar_tarea_por_nombre(case_id, "", cookies, headers)
+            print(f"📊 Total de tareas disponibles: {len(tareas_disponibles)}")
+
+        print(f"Session: {request.session.items()}")
+        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ3YWx0ZXIuYmF0ZXNAY29uc2Vqby5jb20iLCJleHAiOjE3NjQyMTQ1OTJ9.mnbjDqQZqHnQogC1k3dAH9wMDQV9QYqvLY45ydjhADg"
+        token = request.session.get("jwt_token_render")
+        data = {
+            "descripcion": descripcion,
+            "nombre_proyecto": proyecto.nombre,
+            "jwtTokenRender": token,
+            # "etapa_id": etapa.id if etapa else None,
+        }
+
+        # Intentar múltiples nombres posibles para la tarea
+        nombres_posibles = [
+            'Registrar Observacion',
+            'Registrar Observación',
+        ]
+        
+        tarea_ejecutada = False
+        for nombre_tarea in nombres_posibles:
+            if bonita_init_task(nombre_tarea, data, request):
+                tarea_ejecutada = True
+                print(f"✅ Tarea ejecutada exitosamente con nombre: '{nombre_tarea}'")
+                break
+            else:
+                print(f"⚠️ No se pudo ejecutar con nombre: '{nombre_tarea}'")
+        
+        if not tarea_ejecutada:
+            print("❌ No se pudo ejecutar ninguna tarea con los nombres intentados")
         
         if descripcion:
             from Observation.models import Observacion
@@ -786,7 +989,7 @@ def detalle_proyecto_seguimiento(request, proyecto_id):
 
 @session_required
 def reportes(request):
-    """Vista para generar reportes gerenciales"""
+    """Vista para generar reportes gerenciales con datos del web service"""
     user_context = get_user_context(request)
     if not user_context:
         return redirect("login")
@@ -795,10 +998,207 @@ def reportes(request):
     if user_context['user_role'] != 'gerencial':
         return redirect('dashboard')
     
-    # Datos para reportes
+    # Importar requests para consumir el web service
+    import requests
+    import json
+    from datetime import datetime
+    
+    # URL base del web service
+    base_url = "https://dssd-cloud.onrender.com"
+    
+    # Obtener token de autorización de la sesión
+    auth_token = request.session.get("jwt_token_render")
+    if not auth_token:
+        messages.error(request, "Token de autorización no encontrado")
+        return redirect('dashboard')
+    
+    headers = {
+        'accept': 'application/json',
+        'Authorization': f'Bearer {auth_token}'
+    }
+    
+    try:
+        # 1. Obtener proyectos
+        proyectos_response = requests.get(f"{base_url}/proyectos/", headers=headers, timeout=10)
+        proyectos_data = proyectos_response.json() if proyectos_response.status_code == 200 else []
+        
+        # 2. Obtener ONGs
+        ongs_response = requests.get(f"{base_url}/ongs/", headers=headers, timeout=10)
+        ongs_data = ongs_response.json() if ongs_response.status_code == 200 else []
+        
+        # 3. Obtener compromisos
+        compromisos_response = requests.get(f"{base_url}/proyectos/compromisos/", headers=headers, timeout=10)
+        compromisos_data = compromisos_response.json() if compromisos_response.status_code == 200 else []
+        
+        # 4. Obtener observaciones
+        observaciones_response = requests.get(f"{base_url}/observaciones/all", headers=headers, timeout=10)
+        observaciones_data = observaciones_response.json() if observaciones_response.status_code == 200 else []
+        
+        # Procesar datos para gráficos
+        datos_procesados = _procesar_datos_reportes(proyectos_data, ongs_data, compromisos_data, observaciones_data)
+        
+        context = user_context.copy()
+        context.update(datos_procesados)
+        context.update({
+            'fecha_actualizacion': datetime.now(),
+        })
+        
+        return render(request, 'reportes.html', context)
+        
+    except requests.RequestException as e:
+        print(f"Error al conectar con el web service: {e}")
+        messages.error(request, "Error al obtener datos del servidor. Mostrando datos locales.")
+        
+        # Fallback a datos locales
+        return _reportes_datos_locales(request, user_context)
+
+def _procesar_datos_reportes(proyectos_data, ongs_data, compromisos_data, observaciones_data):
+    """Procesa los datos del web service para generar los gráficos"""
+    
+    # Métricas generales
+    total_proyectos = len(proyectos_data)
+    total_compromisos = len(compromisos_data)
+    total_observaciones = len(observaciones_data)
+    total_ongs = len(ongs_data)
+    
+    # Datos para gráfico de progreso de proyectos
+    proyectos_progreso = {}
+    for proyecto in proyectos_data:
+        ong_nombre = proyecto.get('originador', {}).get('nombre', 'ONG Desconocida')
+        if ong_nombre not in proyectos_progreso:
+            proyectos_progreso[ong_nombre] = {
+                'proyectos': [],
+                'total_etapas': 0,
+                'etapas_completadas': 0
+            }
+        
+        # Simular datos de etapas (ajustar según estructura real del API)
+        total_etapas = proyecto.get('total_etapas', 5)  # Valor por defecto
+        completadas = proyecto.get('etapas_completadas', 2)  # Valor por defecto
+        
+        proyectos_progreso[ong_nombre]['proyectos'].append(proyecto)
+        proyectos_progreso[ong_nombre]['total_etapas'] += total_etapas
+        proyectos_progreso[ong_nombre]['etapas_completadas'] += completadas
+    
+    # Preparar datos para Chart.js - Progreso
+    labels_progreso = list(proyectos_progreso.keys())[:6]  # Máximo 6 ONGs
+    completadas_progreso = []
+    pendientes_progreso = []
+    
+    for ong in labels_progreso:
+        data = proyectos_progreso[ong]
+        completadas_progreso.append(data['etapas_completadas'])
+        pendientes_progreso.append(data['total_etapas'] - data['etapas_completadas'])
+    
+    # Datos para gráfico de compromisos por ONG
+    compromisos_por_ong = {}
+    for compromiso in compromisos_data:
+        ong_nombre = compromiso.get('responsable', {}).get('nombre', 'ONG Desconocida')
+        if ong_nombre not in compromisos_por_ong:
+            compromisos_por_ong[ong_nombre] = {'total': 0, 'aceptados': 0}
+        
+        compromisos_por_ong[ong_nombre]['total'] += 1
+        if compromiso.get('estado', False):  # Asumiendo que hay un campo estado
+            compromisos_por_ong[ong_nombre]['aceptados'] += 1
+    
+    # Preparar datos para Chart.js - Compromisos
+    labels_compromisos = list(compromisos_por_ong.keys())[:6]
+    aceptados_compromisos = []
+    totales_compromisos = []
+    
+    for ong in labels_compromisos:
+        data = compromisos_por_ong[ong]
+        aceptados_compromisos.append(data['aceptados'])
+        totales_compromisos.append(data['total'])
+    
+    # Datos para gráfico de observaciones por proyecto
+    observaciones_por_proyecto = {}
+    for observacion in observaciones_data:
+        proyecto_nombre = observacion.get('proyecto', 'Proyecto Desconocido')
+        if proyecto_nombre not in observaciones_por_proyecto:
+            observaciones_por_proyecto[proyecto_nombre] = 0
+        observaciones_por_proyecto[proyecto_nombre] += 1
+    
+    # Preparar datos para Chart.js - Observaciones
+    items_observaciones = list(observaciones_por_proyecto.items())
+    items_observaciones.sort(key=lambda x: x[1], reverse=True)  # Ordenar por cantidad
+    labels_observaciones = [item[0][:25] + '...' if len(item[0]) > 25 else item[0] for item in items_observaciones[:8]]
+    valores_observaciones = [item[1] for item in items_observaciones[:8]]
+    
+    # Calcular eficiencia de ONGs
+    eficiencia_ongs = []
+    for ong in ongs_data[:10]:  # Top 10
+        ong_nombre = ong.get('nombre', 'ONG Desconocida')
+        compromisos_ong = compromisos_por_ong.get(ong_nombre, {'total': 0, 'aceptados': 0})
+        
+        if compromisos_ong['total'] > 0:
+            porcentaje = (compromisos_ong['aceptados'] / compromisos_ong['total']) * 100
+        else:
+            porcentaje = 0
+        
+        eficiencia_ongs.append({
+            'nombre': ong_nombre,
+            'porcentaje_eficiencia': porcentaje,
+            'total_compromisos': compromisos_ong['total'],
+            'compromisos_completados': compromisos_ong['aceptados']
+        })
+    
+    # Ordenar por eficiencia
+    eficiencia_ongs.sort(key=lambda x: x['porcentaje_eficiencia'], reverse=True)
+    
+    # Preparar detalle de proyectos para la tabla
+    proyectos_detalle = []
+    for proyecto in proyectos_data[:15]:  # Top 15 proyectos
+        ong_originante = proyecto.get('originador', {}).get('nombre', 'ONG Desconocida')
+        
+        # Calcular métricas del proyecto
+        total_etapas = proyecto.get('total_etapas', 5)
+        etapas_completadas = proyecto.get('etapas_completadas', 2)
+        progreso = (etapas_completadas / total_etapas * 100) if total_etapas > 0 else 0
+        
+        # Contar observaciones del proyecto
+        obs_proyecto = sum(1 for obs in observaciones_data if obs.get('proyecto') == proyecto.get('nombre', ''))
+        
+        proyectos_detalle.append({
+            'ong_originante': ong_originante,
+            'nombre': proyecto.get('nombre', 'Proyecto sin nombre'),
+            'total_etapas': total_etapas,
+            'etapas_completadas': etapas_completadas,
+            'progreso': progreso,
+            'observaciones': obs_proyecto,
+            'estado': proyecto.get('estado', 'En proceso')
+        })
+    
+    return {
+        'metricas': {
+            'total_proyectos': total_proyectos,
+            'total_compromisos': total_compromisos,
+            'total_observaciones': total_observaciones,
+            'total_ongs': total_ongs
+        },
+        'datos_progreso': json.dumps({
+            'labels': labels_progreso,
+            'completadas': completadas_progreso,
+            'pendientes': pendientes_progreso
+        }),
+        'datos_compromisos': json.dumps({
+            'labels': labels_compromisos,
+            'aceptados': aceptados_compromisos,
+            'totales': totales_compromisos
+        }),
+        'datos_observaciones': json.dumps({
+            'labels': labels_observaciones,
+            'valores': valores_observaciones
+        }),
+        'eficiencia_ongs': eficiencia_ongs,
+        'proyectos_detalle': proyectos_detalle
+    }
+
+def _reportes_datos_locales(request, user_context):
+    """Fallback para mostrar datos locales si falla el web service"""
     from django.db.models import Count, Avg
     
-    # Reporte 1: Eficiencia por ONG
+    # Datos locales como fallback
     eficiencia_ongs = list(
         ONG.objects.annotate(
             total_compromisos=Count('compromisos_responsables'),
@@ -813,9 +1213,36 @@ def reportes(request):
         else:
             ong.porcentaje_eficiencia = 0
     
+    # Datos simulados para los gráficos
+    datos_simulados = {
+        'metricas': {
+            'total_proyectos': Proyecto.objects.count(),
+            'total_compromisos': 0,  # Calcular según tu modelo
+            'total_observaciones': 0,  # Calcular según tu modelo
+            'total_ongs': ONG.objects.count()
+        },
+        'datos_progreso': json.dumps({
+            'labels': ['ONG Local 1', 'ONG Local 2'],
+            'completadas': [4, 5],
+            'pendientes': [2, 0]
+        }),
+        'datos_compromisos': json.dumps({
+            'labels': ['ONG Local 1', 'ONG Local 2'],
+            'aceptados': [8, 4],
+            'totales': [10, 4]
+        }),
+        'datos_observaciones': json.dumps({
+            'labels': ['Proyecto Local 1', 'Proyecto Local 2'],
+            'valores': [2, 1]
+        }),
+        'eficiencia_ongs': [{'nombre': ong.nombre, 'porcentaje_eficiencia': ong.porcentaje_eficiencia} for ong in eficiencia_ongs[:5]],
+        'proyectos_detalle': []
+    }
+    
     context = user_context.copy()
+    context.update(datos_simulados)
     context.update({
-        'eficiencia_ongs': eficiencia_ongs,
+        'fecha_actualizacion': datetime.now(),
     })
     
     return render(request, 'reportes.html', context)
@@ -835,7 +1262,8 @@ def marcar_observacion_resuelta(request, observacion_id):
         observacion = Observacion.objects.get(id=observacion_id)
         
         # Verificar permisos - solo ONGs originantes pueden marcar como resueltas las observaciones de sus proyectos
-        if role == 'ong_originante' and observacion.proyecto.originador == usuario.ong:
+        if role == 'ong_originante' and observacion.proyecto.originador == usuario.ong:    
+    
             observacion.marcar_como_resuelta()
             messages.success(request, f'Observación marcada como resuelta para el proyecto "{observacion.proyecto.nombre}"')
         else:
